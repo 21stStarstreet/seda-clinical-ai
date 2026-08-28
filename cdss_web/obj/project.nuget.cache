@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "ZypJK0o/A34=",
+  "success": true,
+  "projectFilePath": "/Users/mustafatiras/Projects/dermatology_project/cdss_web/cdss_web.csproj",
+  "expectedPackageFiles": [
+    "/Users/mustafatiras/.nuget/packages/questpdf/2024.10.3/questpdf.2024.10.3.nupkg.sha512"
+  ],
+  "logs": []
+}

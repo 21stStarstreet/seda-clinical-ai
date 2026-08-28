@@ -1,0 +1,22 @@
+@* 
+    RedirectToLogin.razor — Yönlendirme Bileşeni
+    
+    Öğrenme notu:
+    - Bu bileşenin görevi sadece /login'e yönlendirmektir.
+    - Neden ayrı bir bileşen? Çünkü Routes.razor içinde doğrudan
+      NavigationManager inject edemeyiz (Routes.razor render pipeline'ının
+      dışındadır). Bu bileşen bu sorunu çözer.
+    - OnInitialized: bileşen ilk oluşturulduğunda çağrılır.
+    - forceLoad:false = Blazor SPA navigation kullanır (sayfa yenilenmez)
+*@
+@inject NavigationManager Nav
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Şu anki URL'yi "returnUrl" olarak saklıyoruz
+        // Böylece giriş yaptıktan sonra kullanıcıyı gitmek istediği sayfaya döndürebiliriz
+        var returnUrl = Uri.EscapeDataString(Nav.Uri);
+        Nav.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: false);
+    }
+}

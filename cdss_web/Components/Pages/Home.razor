@@ -1,0 +1,255 @@
+@page "/"
+@layout MainLayout
+@inject CdssApiService ApiService
+
+<PageTitle>Anasayfa</PageTitle>
+
+<div class="home-hero fade-in">
+    <h2>SEDA (Sedef Destek Algoritması)</h2>
+    <p>
+        Makine öğrenmesi destekli klinik karar sistemi. Hasta verilerini girin,
+        model en uygun uzman birimini belirlesin.
+    </p>
+</div>
+
+<!-- ─── Sistem Durumu Kartları ─────────────────────────────────────────────── -->
+<div class="stats-grid fade-in" style="margin-bottom:20px;">
+    <!--<div class="stat-card">
+        <div class="stat-icon"><i class="ph ph-robot"></i></div>
+        <div class="stat-value">@(_health?.ModelVersiyonu ?? "—")</div>
+        <div class="stat-label">Aktif Model Versiyonu</div>
+    </div>-->
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ph-duotone ph-lightning"></i></div>
+        <div class="stat-value" style="color: @(_health?.LlmAktif == true ? "var(--success)" : "var(--text-muted)")">
+            @(_health?.LlmAktif == true ? "Aktif" : "Pasif")
+        </div>
+        <div class="stat-label">LLM Açıklama Motoru</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="ph-duotone ph-link"></i></div>
+        <div class="stat-value" style="color: @(_health?.ModelYuklendi == true ? "var(--success)" : "var(--danger)")">
+            @(_health?.ModelYuklendi == true ? "Bağlı" : "Bağlanamıyor")
+        </div>
+        <div class="stat-label">API Durumu</div>
+    </div>
+    <!--<div class="stat-card">
+        <div class="stat-icon"><i class="ph ph-list-dashes"></i></div>
+        <div class="stat-value">@_loglar.Count</div>
+        <div class="stat-label">Toplam Karar (Tümü)</div>
+    </div>-->
+</div>
+
+<!-- ─── Klinik İstatistikler (Gerçek Veriler) ────────────────────────────── -->
+@if (_loglar.Count > 0)
+{
+    var bugun = _loglar.Count(l => DateTime.TryParse(l.Timestamp, out var d) && d.Date == DateTime.Today);
+    var buHafta = _loglar.Count(l => DateTime.TryParse(l.Timestamp, out var d) && d >= DateTime.Today.AddDays(-7));
+    var ftrOran = (double)_loglar.Count(l => l.Tahmin?.Ftr == true) / _loglar.Count * 100;
+    var aileOran = (double)_loglar.Count(l => l.Tahmin?.AileHekimligi == true) / _loglar.Count * 100;
+    var sistemikOran = (double)_loglar.Count(l => l.Tahmin?.SistemikTedavi == true) / _loglar.Count * 100;
+
+    <div class="card fade-in" style="margin-bottom:20px;">
+        <div class="card-title" style="margin-bottom:16px;"><i class="ph ph-chart-bar" style="margin-right:8px;"></i>Karar Dağılımı</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+            <!-- Bugün -->
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:28px;font-weight:800;color:var(--accent);">@bugun</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Bugün</div>
+            </div>
+            <!-- Bu Hafta -->
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:28px;font-weight:800;color:#818CF8;">@buHafta</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Bu Hafta</div>
+            </div>
+            <!-- Toplam -->
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:28px;font-weight:800;color:var(--text-primary);">@_loglar.Count</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Toplam</div>
+            </div>
+        </div>
+
+        <!-- Birim bazlı oran barları -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="home-stat-row">
+                <span class="home-stat-label"><i class="ph-duotone ph-person-simple-walk" style="margin-right:4px;"></i>FTR Önerilen</span>
+                <div class="prob-bar-bg" style="flex:1;margin:0 12px;">
+                    <div class="prob-bar-fill positive-fill" style="width:@((int)ftrOran)%"></div>
+                </div>
+                <span class="home-stat-pct">%@((int)ftrOran) — @_loglar.Count(l => l.Tahmin?.Ftr == true) hasta</span>
+            </div>
+            <div class="home-stat-row">
+                <span class="home-stat-label"><i class="ph-duotone ph-hospital" style="margin-right:4px;"></i>Aile Hek. Önerilen</span>
+                <div class="prob-bar-bg" style="flex:1;margin:0 12px;">
+                    <div style="height:100%;border-radius:inherit;background:#818CF8;width:@((int)aileOran)%;transition:width 0.6s ease;"></div>
+                </div>
+                <span class="home-stat-pct">%@((int)aileOran) — @_loglar.Count(l => l.Tahmin?.AileHekimligi == true) hasta</span>
+            </div>
+            <div class="home-stat-row">
+                <span class="home-stat-label"><i class="ph-duotone ph-pill" style="margin-right:4px;"></i>Sistemik Tedavi</span>
+                <div class="prob-bar-bg" style="flex:1;margin:0 12px;">
+                    <div style="height:100%;border-radius:inherit;background:var(--warning);width:@((int)sistemikOran)%;transition:width 0.6s ease;"></div>
+                </div>
+                <span class="home-stat-pct">%@((int)sistemikOran) — @_loglar.Count(l => l.Tahmin?.SistemikTedavi == true) hasta</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Son 5 Karar ──────────────────────────────────────────────────── -->
+    <div class="card fade-in" style="margin-bottom:20px;">
+        <div class="card-title" style="margin-bottom:12px;"><i class="ph-duotone ph-clock" style="margin-right:6px;"></i>Son Kararlar</div>
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Tarih / Saat</th>
+                    <th>Hasta Adı / ID</th>
+                    <th>FTR</th>
+                    <th>Aile Hek.</th>
+                    <th>Sistemik</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in _loglar.OrderByDescending(l => l.Id).Take(5))
+                {
+                    <tr>
+                        <td class="audit-id">#@log.Id</td>
+                        <td class="audit-time">@FormatTarih(log.Timestamp)</td>
+                        <td class="audit-hasta">@(!string.IsNullOrEmpty(log.HastaAdi) ? log.HastaAdi : MaskId(log.HastaId))</td>
+                        <td>@KararBadge(log.Tahmin?.Ftr == true)</td>
+                        <td>@KararBadge(log.Tahmin?.AileHekimligi == true)</td>
+                        <td>@KararBadge(log.Tahmin?.SistemikTedavi == true)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else if (_loglarYuklendi)
+{
+    <!-- İlk kez kullanım -->
+    <div class="card fade-in" style="margin-bottom:20px;text-align:center;padding:40px;">
+        <div style="font-size:40px;margin-bottom:12px;"><i class="ph ph-flask"></i></div>
+        <p style="color:var(--text-muted);">Henüz hiç karar alınmamış. İlk değerlendirmeyi yapmak için <a href="/degerlendirme" style="color:var(--accent);">buraya tıklayın</a>.</p>
+    </div>
+}
+@*<!-- ─── Nasıl Kullanılır? ─────────────────────────────────────────────────── -->
+<div class="card fade-in" style="margin-bottom:20px;">
+    <div class="card-title">Nasıl Kullanılır?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:28px;"><i class="ph-duotone ph-pencil-line"></i></span>
+            <strong style="font-size:14px;color:var(--text-primary);">1. Hasta Verisi Girin</strong>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;">
+                Hasta Değerlendirme sayfasına geçin. PASI skoru, VKİ, LDL ve klinik bulgular girilir.
+            </p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:28px;"><i class="ph ph-flask"></i></span>
+            <strong style="font-size:14px;color:var(--text-primary);">2. Değerlendirme Alın</strong>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;">
+                XGBoost modeli 3 birim için bağımsız karar verir. SHAP ile her karar açıklanır.
+            </p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="font-size:28px;"><i class="ph-duotone ph-chat-text"></i></span>
+            <strong style="font-size:14px;color:var(--text-primary);">3. Açıklamayı Okuyun</strong>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;">
+                Yapay zeka kararı Türkçe, anlaşılır bir dille açıklar. Tüm kararlar kayıt altına alınır.
+            </p>
+        </div>
+    </div>
+</div>
+<!-- ─── Değerlendirilen Birimler ─────────────────────────────────────────── -->
+<div class="card fade-in">
+    <div class="card-title">Değerlendirilen Birimler</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div style="padding:16px;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <div style="font-size:22px;margin-bottom:8px;"><i class="ph-duotone ph-person-simple-walk"></i></div>
+            <strong style="font-size:13px;color:var(--accent);">FTR</strong>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                Fizik Tedavi ve Rehabilitasyon.<br/>
+                Tırnak tutulumu, eklem bulguları, sabah tutukluğu temel göstergelerdir.
+            </p>
+        </div>
+        <div style="padding:16px;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <div style="font-size:22px;margin-bottom:8px;"><i class="ph-duotone ph-hospital"></i></div>
+            <strong style="font-size:13px;color:#818CF8;">Aile Hekimliği</strong>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                Komorbidite yönetimi.<br/>
+                Obezite, yüksek LDL, aktif sigara kullanımı temel göstergelerdir.
+            </p>
+        </div>
+        <div style="padding:16px;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <div style="font-size:22px;margin-bottom:8px;"><i class="ph-duotone ph-pill"></i></div>
+            <strong style="font-size:13px;color:var(--warning);">Sistemik Tedavi</strong>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.5;">
+                İlaç tedavisi başlatma kararı.<br/>
+                PASI &gt; 10 şiddetli hastalık göstergesidir.
+            </p>
+        </div>
+    </div>
+</div>*@
+
+<style>
+    .home-stat-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .home-stat-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        width: 180px;
+        flex-shrink: 0;
+    }
+    .home-stat-pct {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        width: 150px;
+        text-align: right;
+        flex-shrink: 0;
+    }
+</style>
+
+@code {
+    private HealthResponse? _health;
+    private List<AuditLogEntry> _loglar = [];
+    private bool _loglarYuklendi = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _health = await ApiService.GetHealthAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // ProtectedSessionStorage sadece SignalR bağlantısı kurulduktan sonra
+        // erişilebilir, bu yüzden logları OnAfterRenderAsync'te çekiyoruz.
+        _loglar = await ApiService.GetLogsAsync(limit: 500);
+        _loglarYuklendi = true;
+        StateHasChanged();
+    }
+
+    private static string MaskId(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return "—";
+        if (id.Length <= 4) return id;
+        return id[..2] + new string('*', id.Length - 4) + id[^2..];
+    }
+
+    private static string FormatTarih(string ts)
+    {
+        if (DateTime.TryParse(ts, out var dt))
+            return dt.ToString("dd.MM.yyyy HH:mm");
+        return ts;
+    }
+
+    private static RenderFragment KararBadge(bool karar) => karar
+        ? @<span class="badge-evet"><i class="ph-bold ph-check"></i></span>
+        : @<span class="badge-hayir"><i class="ph-bold ph-x"></i></span>;
+}

@@ -1,0 +1,57 @@
+{
+  "ftr": {
+    "display_name": "Fizik Tedavi ve Rehabilitasyon (FTR)",
+    "f1": 0.9718,
+    "precision": 0.9718,
+    "recall": 0.9718,
+    "auc_roc": 0.9733,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 118,
+      "fp": 5,
+      "fn": 5,
+      "tp": 172
+    },
+    "n_positive": 177,
+    "n_negative": 123
+  },
+  "aile_hekimligi": {
+    "display_name": "Aile Hekimliği",
+    "f1": 0.9536,
+    "precision": 0.9774,
+    "recall": 0.931,
+    "auc_roc": 0.9584,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 63,
+      "fp": 5,
+      "fn": 16,
+      "tp": 216
+    },
+    "n_positive": 232,
+    "n_negative": 68
+  },
+  "sistemik_tedavi": {
+    "display_name": "Sistemik Tedavi",
+    "f1": 0.9962,
+    "precision": 0.9925,
+    "recall": 1.0,
+    "auc_roc": 0.9956,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 167,
+      "fp": 1,
+      "fn": 0,
+      "tp": 132
+    },
+    "n_positive": 132,
+    "n_negative": 168
+  },
+  "overall": {
+    "exact_match_accuracy": 0.8933,
+    "hamming_loss": 0.0356,
+    "macro_f1": 0.9739,
+    "micro_f1": 0.9701,
+    "n_test_samples": 300
+  }
+}

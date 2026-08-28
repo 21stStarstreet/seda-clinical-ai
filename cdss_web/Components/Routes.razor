@@ -1,0 +1,26 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Components.Layout.MainLayout)">
+            <NotAuthorized>
+                <RedirectToLogin />
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h2" />
+    </Found>
+    <NotFound>
+        <PageTitle>Sayfa Bulunamadı — CDSS</PageTitle>
+        <LayoutView Layout="typeof(Components.Layout.MainLayout)">
+            <div style="text-align:center;padding:80px 20px;">
+                <div style="font-size:48px;margin-bottom:16px;"><i class="ph ph-file-dashed"></i></div>
+                <h1 style="color:var(--text-primary);margin-bottom:8px;">Sayfa Bulunamadı</h1>
+                <p style="color:var(--text-muted);margin-bottom:24px;">Aradığınız bağlantı yanlış veya taşınmış olabilir.</p>
+                <a href="/" class="btn btn-primary" style="margin-top:20px;display:inline-flex;">
+                    Anasayfaya Dön
+                </a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

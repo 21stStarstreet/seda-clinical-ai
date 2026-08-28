@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Benzersiz servis kimliği -->
+    <key>Label</key>
+    <string>com.cdss.backup</string>
+
+    <!-- Çalıştırılacak program ve argümanlar -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/mustafatiras/Projects/dermatology_project/.venv/bin/python3</string>
+        <string>/Users/mustafatiras/Projects/dermatology_project/scripts/backup.py</string>
+    </array>
+
+    <!-- Çalışma dizini — backup.py bu dizinden audit.db'yi arar -->
+    <key>WorkingDirectory</key>
+    <string>/Users/mustafatiras/Projects/dermatology_project</string>
+
+    <!-- Her gün saat 02:00'de çalıştır -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Log dosyaları -->
+    <key>StandardOutPath</key>
+    <string>/Users/mustafatiras/Projects/dermatology_project/backup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/mustafatiras/Projects/dermatology_project/backup_error.log</string>
+
+    <!-- macOS açılışında otomatik yükle -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

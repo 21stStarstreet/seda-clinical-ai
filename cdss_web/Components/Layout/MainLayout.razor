@@ -1,0 +1,249 @@
+@inherits LayoutComponentBase
+@inject CdssApiService ApiService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="app-layout @(_isSidebarCollapsed ? "collapsed" : "")">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <span class="logo-icon"><img src="seda-logo.jpg?v=2.1" alt="SEDA Logo" class="custom-logo" /></span>
+        </div>
+
+        <span class="nav-section-label">Menü</span>
+
+        <div class="nav-links-container">
+
+        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+            <span class="nav-icon"><i class="ph ph-house"></i></span>
+            <span class="nav-text">Anasayfa</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/degerlendirme">
+            <span class="nav-icon"><i class="ph ph-microscope"></i></span>
+            <span class="nav-text">Hasta Değerlendirme</span>
+        </NavLink>
+
+        <NavLink class="nav-link" href="/audit-log">
+            <span class="nav-icon"><i class="ph ph-list-dashes"></i></span>
+            <span class="nav-text">Geçmiş Kararlar</span>
+        </NavLink>
+
+        <a class="nav-link" @onclick="ToggleSidebar" style="margin-top:auto;">
+            <span class="nav-icon"><i class="@(_isSidebarCollapsed ? "ph-bold ph-caret-right" : "ph-bold ph-caret-left")"></i></span>
+            <span class="nav-text">@(_isSidebarCollapsed ? "Genişlet" : "Daralt")</span>
+        </a>
+
+        </div>
+
+        <div class="sidebar-footer">
+            @* Kullanıcı bilgisi ve çıkış butonu *@
+            @if (_kullaniciAdi is not null)
+            {
+                <div class="user-info">
+                    <div class="user-avatar">@_kullaniciAdi[0].ToString().ToUpper()</div>
+                    <div class="user-details">
+                        <span class="user-name">@_kullaniciAdi</span>
+                        <span class="user-role">Hekim</span>
+                    </div>
+                </div>
+                <button class="logout-btn" @onclick="HandleLogout">
+                    <span><i class="ph ph-sign-out"></i></span> <span class="btn-text">Çıkış Yap</span>
+                </button>
+            }
+        </div>
+    </nav>
+
+    @if (_timeoutUyarisiGoster)
+    {
+        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);">
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:32px;max-width:400px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                <div style="font-size:48px;margin-bottom:16px;"><i class="ph-duotone ph-hourglass-high"></i></div>
+                <h3 style="margin:0 0 12px;color:var(--text-primary);font-size:20px;">Oturum Süresi Dolmak Üzere</h3>
+                <p style="color:var(--text-secondary);margin:0 0 24px;line-height:1.5;">
+                    Güvenlik nedeniyle oturumunuz <strong>@(_kalanSaniye / 60) dakika @(_kalanSaniye % 60) saniye</strong> içinde otomatik olarak kapatılacaktır. Devam etmek istiyor musunuz?
+                </p>
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button class="btn btn-ghost" @onclick="HandleLogout">Çıkış Yap</button>
+                    <button class="btn btn-primary" @onclick="ResetTimeout" style="background:var(--accent);color:white;border:none;">Oturuma Devam Et</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- İçerik -->
+    <main class="main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    // ── Sabitler ──────────────────────────────────────────────────────────────
+    private const int TimeoutSaniye      = 30 * 60; // 30 dakika
+    private const int UyariSaniye        = 300;      // Son 5 dakika → uyarı göster
+    private const int KontrolAraligi     = 30_000;   // Her 30 sn bir kontrol
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    private bool _apiOnline = false;
+    private string? _modelVersion;
+    private string? _kullaniciAdi;
+    private System.Timers.Timer? _timer;
+    private bool _timeoutUyarisiGoster = false;
+    private int _kalanSaniye = UyariSaniye;
+    private bool _isSidebarCollapsed = true;
+    private int _jsHataCount = 0;  // Ard arda JS hata sayıcısı
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // ── Auth Kontrolü ─────────────────────────────────────────────────────
+        var provider = (CustomAuthStateProvider)AuthStateProvider;
+        var state = await provider.GetAuthenticationStateAsync();
+
+        if (state.User.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/login", forceLoad: false);
+            return;
+        }
+
+        _kullaniciAdi = state.User.Identity.Name;
+
+        // ── API Durumu ────────────────────────────────────────────────────────
+        var health = await ApiService.GetHealthAsync();
+        if (health is not null)
+        {
+            _apiOnline = health.ModelYuklendi;
+            _modelVersion = health.ModelVersiyonu;
+        }
+
+        // ── Sidebar Durumu (LocalStorage) ─────────────────────────────────────
+        try
+        {
+            var savedState = await JS.InvokeAsync<string>("localStorage.getItem", "sidebarCollapsed");
+            if (!string.IsNullOrEmpty(savedState))
+            {
+                _isSidebarCollapsed = savedState == "true";
+            }
+        }
+        catch { /* yoksay */ }
+
+        // ── Session Timeout Timer'ı Başlat ────────────────────────────────────
+        try
+        {
+            await JS.InvokeVoidAsync("resetActivity"); // İlk girişte sayacı sıfırla
+            _timer = new System.Timers.Timer(KontrolAraligi);
+            _timer.Elapsed += async (_, _) => await InvokeAsync(TimeoutKontrol);
+            _timer.AutoReset = true;
+            _timer.Start();
+        }
+        catch 
+        {
+            // JS fonksiyonu yüklenmemişse yoksay (eski cache vb)
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ToggleSidebar()
+    {
+        _isSidebarCollapsed = !_isSidebarCollapsed;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "sidebarCollapsed", _isSidebarCollapsed.ToString().ToLower());
+        }
+        catch { /* yoksay */ }
+    }
+
+    // ── Timeout Kontrol ───────────────────────────────────────────────────────
+    private async Task TimeoutKontrol()
+    {
+        try
+        {
+            // JS'ten boşta geçen süreyi saniye cinsinden al
+            var bosatSaniye = await JS.InvokeAsync<int>("getIdleSeconds");
+            _jsHataCount = 0;  // Başarılı → sayıcıyı sıfırla
+            var kalanSaniye = TimeoutSaniye - bosatSaniye;
+
+            if (kalanSaniye <= 0)
+            {
+                // Süre doldu → oturumu kapat
+                _timer?.Stop();
+                await InvokeAsync(async () =>
+                {
+                    var provider = (CustomAuthStateProvider)AuthStateProvider;
+                    await provider.CikisYapAsync();
+                    Nav.NavigateTo("/login?reason=timeout", forceLoad: false);
+                });
+            }
+            else if (kalanSaniye <= UyariSaniye)
+            {
+                // Son 60 saniye → uyarı göster
+                _kalanSaniye = kalanSaniye;
+                _timeoutUyarisiGoster = true;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                // Normal → uyarıyı gizle
+                if (_timeoutUyarisiGoster)
+                {
+                    _timeoutUyarisiGoster = false;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch
+        {
+            _jsHataCount++;
+            if (_jsHataCount >= 3)
+            {
+                // Ard arda 3 hata → timer'i durdur (JS yüklenmemiş ya da bağlantı koptu)
+                Console.WriteLine("[MainLayout] JS Interop 3 kez başarısız — timeout timer durduruldu.");
+                _timer?.Stop();
+            }
+        }
+    }
+
+    // ── Kullanıcı "Devam Et" dedi → sayacı sıfırla ───────────────────────────
+    private async Task ResetTimeout()
+    {
+        await JS.InvokeVoidAsync("resetActivity");
+        _timeoutUyarisiGoster = false;
+        StateHasChanged();
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+    private async Task HandleLogout()
+    {
+        try
+        {
+            Console.WriteLine("[MainLayout] Çıkış yapılıyor...");
+            _timer?.Stop();
+            var provider = (CustomAuthStateProvider)AuthStateProvider;
+            await provider.CikisYapAsync();
+            Console.WriteLine("[MainLayout] Oturum temizlendi, /login'e yönlendiriliyor.");
+            Nav.NavigateTo("/login?reason=logout", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MainLayout] Çıkış hatası: {ex.Message}");
+            // Fallback
+            Nav.NavigateTo("/login?reason=logout", forceLoad: true);
+        }
+    }
+
+    // ── IDisposable: Component yok edilince timer'ı temizle ───────────────────
+    // Öğrenme notu: Timer sunucu belleğinde yaşar. Sayfadan çıkılınca
+    // Blazor bileşeni dispose eder — timer'ı burada durdurmak şarttır,
+    // yoksa arka planda çalışmaya devam eder (memory leak).
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}

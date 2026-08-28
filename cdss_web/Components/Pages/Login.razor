@@ -1,0 +1,204 @@
+@page "/login"
+@layout EmptyLayout
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.WebUtilities
+
+<PageTitle>Giriş — SEDA</PageTitle>
+
+<div class="login-split-wrapper">
+
+    <div class="login-split-left">
+        <div class="login-split-brand" style="display:flex; flex-direction:column; align-items:flex-start;">
+            <img src="seda-logo.jpg?v=2.1" alt="SEDA Logo" class="login-split-logo" />
+            <span class="seda-animated-logo-text">SEDA</span>
+            <span class="seda-animated-subtitle">SEDEF DESTEK ALGORİTMASI</span>
+        </div>
+
+        <div class="login-split-hero">
+            <h1 class="login-split-title">Psoriazis Yönlendirme<br />Sistemi</h1>
+            <p class="login-split-subtitle">
+                Hastanın klinik bulgularını analiz ederek Sistemik Tedavi, FTR veya Aile Hekimliği ihtiyacını saniyeler içinde değerlendiren yapay zeka tabanlı karar destek asistanınız.
+            </p>
+
+            <div class="login-routing-cards">
+                <div class="login-routing-card">
+                    <div class="login-routing-label">
+                        <i class="ph ph-person-arms-spread"></i> Fizik Tedavi ve Rehabilitasyon
+                    </div>
+                    <div class="login-routing-desc">Eklem bulguları, sabah tutukluğu, psöriatik artrit riski</div>
+                    <div class="login-routing-score">F1 · 0.972</div>
+                </div>
+                <div class="login-routing-card">
+                    <div class="login-routing-label">
+                        <i class="ph ph-heartbeat"></i> Aile Hekimliği
+                    </div>
+                    <div class="login-routing-desc">Kardiyometabolik komorbidite: VKİ, LDL, sigara, yaş</div>
+                    <div class="login-routing-score">F1 · 0.954</div>
+                </div>
+                <div class="login-routing-card">
+                    <div class="login-routing-label">
+                        <i class="ph ph-pill"></i> Sistemik Tedavi
+                    </div>
+                    <div class="login-routing-desc">PASI &gt; 10 veya DLQI &gt; 10 veya BSA &gt; %10 (Onlar Kuralı)</div>
+                    <div class="login-routing-score">F1 · 0.996</div>
+                </div>
+            </div>
+
+            <!--<div class="login-split-inputs-label">Değerlendirilen klinik girdiler</div>
+            <div class="login-split-pills">
+                <span class="login-pill"><i class="ph ph-chart-line-up"></i> PASI</span>
+                <span class="login-pill"><i class="ph ph-chart-line-up"></i> DLQI</span>
+                <span class="login-pill"><i class="ph ph-chart-line-up"></i> BSA</span>
+                <span class="login-pill"><i class="ph ph-drop"></i> LDL</span>
+                <span class="login-pill"><i class="ph ph-scales"></i> VKİ</span>
+                <span class="login-pill"><i class="ph ph-bone"></i> Eklem</span>
+                <span class="login-pill"><i class="ph ph-sun"></i> Tırnak</span>
+                <span class="login-pill"><i class="ph ph-clock"></i> Sabah Tutukluğu</span>
+            </div>-->
+        </div>
+
+        <div class="login-split-watermark">
+            <i class="ph ph-first-aid"></i>
+        </div>
+    </div>
+
+    <div class="login-split-right">
+        <div class="login-split-version">v1.0</div>
+
+        <div class="login-split-form-wrap">
+
+            @if (_reason == "timeout")
+            {
+                <div class="login-banner login-banner--warning">
+                    <i class="ph ph-clock"></i>
+                    <span>Oturumunuz 30 dakika hareketsizlik nedeniyle sonlandırıldı.</span>
+                </div>
+            }
+            else if (_reason == "unauthorized")
+            {
+                <div class="login-banner login-banner--error">
+                    <i class="ph ph-lock"></i>
+                    <span>Bu sayfaya erişmek için önce giriş yapmanız gerekiyor.</span>
+                </div>
+            }
+            else if (_reason == "logout")
+            {
+                <div class="login-banner login-banner--success">
+                    <i class="ph ph-check-circle"></i>
+                    <span>Oturumunuz başarıyla sonlandırıldı. Güle güle!</span>
+                </div>
+            }
+
+            <h2 class="login-split-heading">Hoş Geldiniz</h2>
+            <p class="login-split-sub">Hesabınıza giriş yapın</p>
+
+            @if (!string.IsNullOrEmpty(_hataMesaji))
+            {
+                <div class="login-banner login-banner--error" style="margin-bottom:20px;">
+                    <i class="ph ph-warning"></i>
+                    <span>@_hataMesaji</span>
+                </div>
+            }
+
+            <EditForm Model="_form" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="login-underline-field">
+                    <label class="login-underline-label">Kullanıcı Adı</label>
+                    <InputText class="login-underline-input"
+                               placeholder="kullanici.adi"
+                               @bind-Value="_form.KullaniciAdi"
+                               autocomplete="username" />
+                    <ValidationMessage For="@(() => _form.KullaniciAdi)" />
+                </div>
+
+                <div class="login-underline-field">
+                    <label class="login-underline-label">Şifre</label>
+                    <input class="login-underline-input"
+                           type="password"
+                           placeholder="••••••••"
+                           @bind="_form.Sifre"
+                           @bind:event="oninput"
+                           autocomplete="current-password" />
+                </div>
+
+                <button type="submit" class="login-split-btn" disabled="@_yukleniyor">
+                    @if (_yukleniyor)
+                    {
+                        <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></span>
+                        <span>Giriş yapılıyor…</span>
+                    }
+                    else
+                    {
+                        <span>Giriş Yap</span>
+                        <i class="ph ph-arrow-right"></i>
+                    }
+                </button>
+            </EditForm>
+
+            <div class="login-split-security">
+                <i class="ph ph-lock-simple"></i>
+                <span>Güvenli bağlantı &middot; SSL şifreli</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class LoginForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Kullanıcı adı gerekli")]
+        public string KullaniciAdi { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Şifre gerekli")]
+        public string Sifre { get; set; } = "";
+    }
+
+    private LoginForm _form = new();
+    private string? _hataMesaji;
+    private bool _yukleniyor;
+
+    [SupplyParameterFromQuery(Name = "reason")]
+    private string? _reason { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    private string? _returnUrl { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var provider = (CustomAuthStateProvider)AuthStateProvider;
+        var state = await provider.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+            Nav.NavigateTo("/degerlendirme");
+    }
+
+    private async Task HandleLogin()
+    {
+        _yukleniyor = true;
+        _hataMesaji = null;
+        StateHasChanged();
+
+        try
+        {
+            var provider = (CustomAuthStateProvider)AuthStateProvider;
+            var basarili = await provider.GirisYapAsync(_form.KullaniciAdi, _form.Sifre);
+
+            if (basarili)
+            {
+                var hedef = string.IsNullOrEmpty(_returnUrl) ? "/degerlendirme" : _returnUrl;
+                Nav.NavigateTo(hedef, forceLoad: false);
+            }
+            else
+            {
+                _hataMesaji = "Kullanıcı adı veya şifre hatalı.";
+            }
+        }
+        finally
+        {
+            _yukleniyor = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,647 @@
+@page "/audit-log"
+@layout MainLayout
+@inject CdssApiService ApiService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject PdfReportService PdfService
+
+<PageTitle>Geçmiş Kararlar</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h2 class="page-title">📁 Geçmiş Kararlar</h2>
+        <p class="page-subtitle">Sistemde daha önce yapılan tüm yapay zeka değerlendirmeleri</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" @onclick="Yenile" disabled="@_yukleniyor">
+        @(_yukleniyor ? "Yükleniyor…" : "↻ Yenile")
+    </button>
+</div>
+
+@if (_hata is not null)
+{
+    <div class="alert-error" style="margin-bottom:16px;">
+        Hata: @_hata
+    </div>
+}
+else if (_yukleniyor)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <div class="spinner" style="margin:0 auto 16px;"></div>
+        <p>Kayıtlar yükleniyor…</p>
+    </div>
+}
+else if (_loglar.Count == 0)
+{
+    <div class="audit-header fade-in">
+        <div style="font-size:40px;margin-bottom:12px;"><i class="ph ph-list-dashes"></i></div>
+        <h2 style="color:var(--text-primary);margin-bottom:8px;">Geçmiş Kararlar (Audit Log)</h2>
+    </div>
+}
+else
+{
+@* Özet Kartları — geçici olarak gizli
+    <div class="stats-grid" style="margin-bottom:20px;">
+        <div class="stat-card">
+            <span class="stat-value">@_loglar.Count</span>
+            <span class="stat-label">Toplam Karar</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_loglar.Count(l => l.Tahmin?.SistemikTedavi == true)</span>
+            <span class="stat-label">Sistemik Tedavi Önerilen</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_loglar.Count(l => l.Tahmin?.Ftr == true)</span>
+            <span class="stat-label">FTR Önerilen</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_loglar.Count(l => l.Tahmin?.AileHekimligi == true)</span>
+            <span class="stat-label">Aile Hekimliği Önerilen</span>
+        </div>
+    </div>
+*@
+
+    @* Arama & Filtre Bloğu *@
+    <div class="card" style="margin-bottom:16px;padding:16px 20px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            @* Serbest metin arama *@
+            <div style="flex:1;min-width:180px;">
+                <input class="form-input" type="text" placeholder="Hasta Adı veya ID ile ara..."
+                       @bind="_aramaMetni" @bind:event="oninput"
+                       style="height:36px;font-size:13px;" />
+            </div>
+
+            @* Karar filtresi *@
+            <select class="form-input" style="height:36px;font-size:13px;min-width:180px;"
+                    @bind="_kararFiltresi">
+                <option value="">Tüm Kararlar</option>
+                <option value="ftr">FTR Önerilen</option>
+                <option value="aile">Aile Hekimliği Önerilen</option>
+                <option value="sistemik">Sistemik Tedavi Önerilen</option>
+                <option value="ftr_hayir">FTR Önerilmeyen</option>
+                <option value="aile_hayir">Aile Hek. Önerilmeyen</option>
+                <option value="sistemik_hayir">Sistemik Tedavi Önerilmeyen</option>
+            </select>
+
+            @* Tarih filtresi *@
+            <div style="display:flex;gap:6px;align-items:center;">
+                <input class="form-input" type="date" @bind="_baslangicTarih"
+                       style="height:36px;font-size:13px;width:140px;" />
+                <span style="color:var(--text-muted);font-size:12px;">—</span>
+                <input class="form-input" type="date" @bind="_bitisTarih"
+                       style="height:36px;font-size:13px;width:140px;" />
+            </div>
+
+            @* Temizle butonu *@
+            @if (!string.IsNullOrEmpty(_aramaMetni) || !string.IsNullOrEmpty(_kararFiltresi) || _baslangicTarih.HasValue || _bitisTarih.HasValue)
+            {
+                <button class="btn btn-ghost btn-sm" @onclick="FiltreleriTemizle"
+                        style="height:36px;white-space:nowrap;">
+                    ✕ Temizle
+                </button>
+            }
+        </div>
+        @if (FiltremiUygulandi)
+        {
+            <p style="margin:10px 0 0;font-size:12px;color:var(--text-muted);">
+                <strong style="color:var(--accent);">@FilterlenmisLoglar.Count</strong> / @_loglar.Count kayıt gösteriliyor
+            </p>
+        }
+    </div>
+
+    @* Log Tablosu *@
+    <div class="card">
+        <div class="card-header" style="padding:16px 20px;border-bottom:1px solid var(--border);">
+            <span style="font-weight:600;font-size:14px;">Karar Geçmişi</span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">
+                Son @_loglar.Count kayıt · KVKK kapsamında korumalı
+            </span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tarih / Saat</th>
+                        <th>Hasta Adı / ID</th>
+                        <th>Model</th>
+                        <th>FTR</th>
+                        <th>Aile Hek.</th>
+                        <th>Sistemik</th>
+                        <th>Süre</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in FilterlenmisLoglar.OrderByDescending(l => l.Id))
+                    {
+                        <tr>
+                            <td class="audit-id">#@log.Id</td>
+                            <td class="audit-time">@FormatTarih(log.Timestamp)</td>
+                            <td class="audit-hasta">@(!string.IsNullOrEmpty(log.HastaAdi) ? log.HastaAdi : MaskId(log.HastaId))</td>
+                            <td>
+                                <span class="badge-version">
+                                    @(string.IsNullOrEmpty(log.ModelVersion) ? "—" : $"v{log.ModelVersion}")
+                                </span>
+                            </td>
+                            <td>@KararBadge(log.Tahmin?.Ftr == true)</td>
+                            <td>@KararBadge(log.Tahmin?.AileHekimligi == true)</td>
+                            <td>@KararBadge(log.Tahmin?.SistemikTedavi == true)</td>
+                            <td class="audit-time">
+                                @(log.ProcessingTimeMs.HasValue ? $"{log.ProcessingTimeMs:F1} ms" : "—")
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-ghost" style="padding:4px 10px;font-size:12px;height:28px;"
+                                        @onclick="() => DetayGoster(log.Id)">
+                                    <i class="ph-bold ph-magnifying-glass"></i> Detay
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* ─── DETAY MODAL ──────────────────────────────────────────────────────────── *@
+@if (_detayModalAcik)
+{
+    <div class="audit-modal-backdrop" @onclick="ModalKapat">
+        <div class="audit-modal-panel" @onclick:stopPropagation>
+
+            @if (_detayYukleniyor)
+            {
+                <div style="text-align:center;padding:60px;">
+                    <div class="spinner" style="margin:0 auto 16px;"></div>
+                    <p style="color:var(--text-muted);">Karar detayları ve yapay zeka analizleri çözülüyor…</p>
+                </div>
+            }
+            else if (_seciliDetay is not null)
+            {
+                var pr = _seciliDetay.PredictionResponse;
+                var pi = _seciliDetay.PatientInput;
+
+                @* ── Modal Başlık ── *@
+                <div class="audit-modal-header">
+                    <div>
+                        <h3 style="font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">
+                            Karar #@pr.AuditId — Detaylı Analiz
+                        </h3>
+                        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;">
+                            Hasta: <strong style="color:var(--accent);">@(!string.IsNullOrEmpty(pi.HastaAdi) ? pi.HastaAdi : MaskId(pi.HastaId))</strong>
+                            &nbsp;·&nbsp; @(string.IsNullOrEmpty(pr.ModelVersiyonu) ? "Model: —" : $"Model {pr.ModelVersiyonu}")
+                            &nbsp;·&nbsp; @(pr.IslemSuresiMs?.ToString("F0") ?? "-") ms
+                        </p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" @onclick="ModalKapat">✕</button>
+                </div>
+
+                @* ── Hasta Parametreleri ── *@
+                <div class="audit-section">
+                    <div class="audit-section-title"><i class="ph-bold ph-heartbeat"></i> Hasta Parametreleri</div>
+                    <div class="audit-params-grid">
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">PASI Skoru</span>
+                            <span class="audit-param-value @(pi.PasiSkoru > 10 ? "value-warn" : "value-ok")">
+                                @(pi.PasiSkoru?.ToString("F1"))
+                            </span>
+                        </div>
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">VKİ</span>
+                            <span class="audit-param-value @(pi.Vki > 30 ? "value-warn" : "value-ok")">
+                                @(pi.Vki?.ToString("F1")) kg/m²
+                            </span>
+                        </div>
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">LDL</span>
+                            <span class="audit-param-value @(pi.Ldl > 130 ? "value-warn" : "value-ok")">
+                                @(pi.Ldl?.ToString("F0")) mg/dL
+                            </span>
+                        </div>
+                        @if (pi.Dlqi.HasValue)
+                        {
+                            <div class="audit-param-item">
+                                <span class="audit-param-label">DLQI</span>
+                                <span class="audit-param-value">@pi.Dlqi.Value.ToString("F0")</span>
+                            </div>
+                        }
+                        @if (pi.Bsa.HasValue)
+                        {
+                            <div class="audit-param-item">
+                                <span class="audit-param-label">BSA</span>
+                                <span class="audit-param-value">%@pi.Bsa.Value.ToString("F0")</span>
+                            </div>
+                        }
+                        @if (pi.Yas.HasValue)
+                        {
+                            <div class="audit-param-item">
+                                <span class="audit-param-label">Yaş</span>
+                                <span class="audit-param-value">@pi.Yas.Value</span>
+                            </div>
+                        }
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">Tırnak Tutulumu</span>
+                            <span class="audit-param-value @(pi.TirnakTutulumu ? "value-warn" : "")">
+                                @(pi.TirnakTutulumu ? HtmlCheckVar : HtmlCrossYok)
+                            </span>
+                        </div>
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">Sabah Tutukluğu</span>
+                            <span class="audit-param-value @(pi.SabahTuruklugu30dk ? "value-warn" : "")">
+                                @(pi.SabahTuruklugu30dk ? HtmlCheckVar : HtmlCrossYok)
+                            </span>
+                        </div>
+                        <div class="audit-param-item">
+                            <span class="audit-param-label">Sigara</span>
+                            <span class="audit-param-value @(pi.Sigara ? "value-warn" : "")">
+                                @(pi.Sigara ? HtmlCheckKullanici : HtmlCrossYok)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── AI Kararları ── *@
+                <div class="audit-section">
+                    <div class="audit-section-title"><i class="ph-bold ph-robot"></i> Yapay Zeka Kararları</div>
+                    <div class="result-grid">
+                        @foreach (var card in BuildLabelCards(pr))
+                        {
+                            <div class="result-card @(card.Karar ? "positive" : "negative")">
+                                <div class="result-card-header">
+                                    <span class="result-card-icon">@LabelIcon(card.Key)</span>
+                                    <span class="result-badge @(card.Karar ? "badge-yes" : "badge-no")">
+                                        @(card.Karar ? "ÖNERİLİYOR" : "GEREKLİ DEĞİL")
+                                    </span>
+                                </div>
+                                <div class="result-card-title">@card.GoruntuAdi</div>
+                                <div class="prob-row">
+                                    <div class="prob-bar-bg">
+                                        <div class="prob-bar-fill @(card.Karar ? "positive-fill" : "negative-fill")"
+                                             style="width:@(card.OlasilikYuzde)%"></div>
+                                    </div>
+                                    <span class="prob-label @(card.Karar ? "positive-text" : "negative-text")">
+                                        %@card.OlasilikYuzde
+                                    </span>
+                                </div>
+                                @if (card.TopFaktorler.Any())
+                                {
+                                    <div class="shap-section-title">Etkili Faktörler</div>
+                                    <div class="shap-list">
+                                        @foreach (var f in card.TopFaktorler.Take(4))
+                                        {
+                                            <div class="shap-item">
+                                                <div class="shap-item-label">
+                                                    <span>@f.Ozellik</span>
+                                                    <span>@(f.ShapDegeri > 0 ? "▲" : "▼") @Math.Abs(f.ShapDegeri).ToString("F3")</span>
+                                                </div>
+                                                <div class="shap-bar-bg">
+                                                    <div class="shap-bar-fill @(f.ShapDegeri >= 0 ? "shap-positive" : "shap-negative")"
+                                                         style="width:@(card.ShapBarWidth(f))%"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ── Klinik Açıklama ── *@
+                @if (!string.IsNullOrWhiteSpace(pr.LlmAciklamasi))
+                {
+                    <div class="audit-section">
+                        <div class="audit-section-title"><i class="ph-duotone ph-chat-text" style="margin-right:4px;"></i>Klinik Açıklama (Yapay Zeka Yorumu)</div>
+                        <div class="llm-box" style="margin-top:0;">
+                            <div class="llm-box-header">
+                                <span><i class="ph-duotone ph-chat-text"></i></span>
+                                <strong>Klinik Açıklama</strong>
+                                <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">
+                                    @if (pr.LlmFallbackUsed)
+                                    {
+                                        <span style="color:#f59e0b;font-weight:600;margin-right:4px;display:flex;align-items:center;gap:4px;"><i class="ph-bold ph-warning"></i> Standart Şablon (Sunucu Hatası)</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="margin-right:4px;">Gemini Flash</span>
+                                    }
+                                    &middot; Model @(pr.ModelVersiyonu)
+                                </span>
+                            </div>
+                            <div class="llm-text">@pr.LlmAciklamasi</div>
+                        </div>
+                    </div>
+                }
+
+                @* ── Modal Footer ── *@
+                <div class="audit-modal-footer">
+                    <button class="btn btn-ghost" @onclick="ModalKapat">Kapat</button>
+                    <button class="btn btn-primary" @onclick="DownloadPdf" disabled="@_pdfYukleniyor">
+                        @if (_pdfYukleniyor)
+                        {
+                            <span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;"></span>
+                            <span>Hazırlanıyor…</span>
+                        }
+                        else
+                        {
+                            <span style="margin-right:6px;">📄</span>
+                            <span>PDF Raporu İndir</span>
+                        }
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div style="text-align:center;padding:60px;">
+                    <p style="display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ph-bold ph-warning"></i> Detaylar alınamadı. Kayıt şifresi çözülemedi ya da kayıt bulunamadı.</p>
+                </div>
+                <div style="text-align:right;padding:16px 24px;">
+                    <button class="btn btn-ghost" @onclick="ModalKapat">Kapat</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    /* ─── Audit Modal Stilleri (Karanlık Tema Uyumlu) ──────────────────────── */
+    .audit-modal-backdrop {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        display: flex; align-items: flex-start; justify-content: center;
+        z-index: 1000;
+        padding: 24px 16px;
+        overflow-y: auto;
+    }
+
+    .audit-modal-panel {
+        background: var(--bg-secondary, #131f2e);
+        border: 1px solid var(--border, #1e2d3d);
+        border-radius: 16px;
+        width: 100%;
+        max-width: 760px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        animation: modalSlideIn 0.2s ease;
+    }
+
+    @@keyframes modalSlideIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .audit-modal-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid var(--border, #1e2d3d);
+    }
+
+    .audit-modal-footer {
+        display: flex; justify-content: flex-end; gap: 12px;
+        padding: 16px 24px;
+        border-top: 1px solid var(--border, #1e2d3d);
+    }
+
+    .audit-section {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border, #1e2d3d);
+    }
+
+    .audit-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .audit-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted, #5a7a9a);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 14px;
+    }
+
+    .audit-params-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .audit-param-item {
+        background: var(--bg-primary, #0d1a27);
+        border: 1px solid var(--border, #1e2d3d);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex; flex-direction: column; gap: 4px;
+    }
+
+    .audit-param-label {
+        font-size: 11px;
+        color: var(--text-muted, #5a7a9a);
+        font-weight: 500;
+    }
+
+    .audit-param-value {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #e2e8f0);
+    }
+
+    .audit-param-value.value-warn { color: #f59e0b; }
+    .audit-param-value.value-ok   { color: #10b981; }
+</style>
+
+@code {
+    private List<AuditLogEntry> _loglar = [];
+    private bool _yukleniyor = true;
+    private string? _hata;
+
+    // ── Filtre State ─────────────────────────────────────────────────────────────────────
+    private string _aramaMetni = "";
+    private string _kararFiltresi = "";
+    private DateTime? _baslangicTarih;
+    private DateTime? _bitisTarih;
+
+    private bool FiltremiUygulandi =>
+        !string.IsNullOrEmpty(_aramaMetni) ||
+        !string.IsNullOrEmpty(_kararFiltresi) ||
+        _baslangicTarih.HasValue ||
+        _bitisTarih.HasValue;
+
+    private List<AuditLogEntry> FilterlenmisLoglar
+    {
+        get
+        {
+            var sonuc = _loglar.AsEnumerable();
+
+            // 1. Hasta ID veya Adı arama
+            if (!string.IsNullOrWhiteSpace(_aramaMetni))
+                sonuc = sonuc.Where(l =>
+                    (l.HastaId?.Contains(_aramaMetni, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (l.HastaAdi?.Contains(_aramaMetni, StringComparison.OrdinalIgnoreCase) == true));
+
+            // 2. Karar filtresi
+            sonuc = _kararFiltresi switch
+            {
+                "ftr"           => sonuc.Where(l => l.Tahmin?.Ftr == true),
+                "aile"          => sonuc.Where(l => l.Tahmin?.AileHekimligi == true),
+                "sistemik"      => sonuc.Where(l => l.Tahmin?.SistemikTedavi == true),
+                "ftr_hayir"     => sonuc.Where(l => l.Tahmin?.Ftr == false),
+                "aile_hayir"    => sonuc.Where(l => l.Tahmin?.AileHekimligi == false),
+                "sistemik_hayir"=> sonuc.Where(l => l.Tahmin?.SistemikTedavi == false),
+                _               => sonuc
+            };
+
+            // 3. Tarih aralığı filtresi
+            if (_baslangicTarih.HasValue)
+                sonuc = sonuc.Where(l => DateTime.TryParse(l.Timestamp, out var dt) && dt.Date >= _baslangicTarih.Value.Date);
+
+            if (_bitisTarih.HasValue)
+                sonuc = sonuc.Where(l => DateTime.TryParse(l.Timestamp, out var dt) && dt.Date <= _bitisTarih.Value.Date);
+
+            return sonuc.ToList();
+        }
+    }
+
+    private void FiltreleriTemizle()
+    {
+        _aramaMetni = "";
+        _kararFiltresi = "";
+        _baslangicTarih = null;
+        _bitisTarih = null;
+    }
+
+
+    private bool _detayModalAcik = false;
+    private bool _detayYukleniyor = false;
+    private AuditLogDetailResponse? _seciliDetay;
+    private bool _pdfYukleniyor = false;
+
+    private string? _kullanici;
+
+    private static readonly string[] LabelOrder = ["ftr", "aile_hekimligi", "sistemik_tedavi"];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _kullanici = state.User.Identity?.Name;
+        await LoglarYukle();
+    }
+
+    private async Task LoglarYukle()
+    {
+        _yukleniyor = true;
+        _hata = null;
+        StateHasChanged();
+
+        var (loglar, hata) = await ApiService.GetLogsWithErrorAsync(limit: 200);
+        _loglar = loglar;
+        _hata = hata;
+
+        _yukleniyor = false;
+        StateHasChanged();
+    }
+
+    private async Task Yenile() => await LoglarYukle();
+
+    private async Task DetayGoster(int id)
+    {
+        _detayModalAcik = true;
+        _detayYukleniyor = true;
+        _seciliDetay = null;
+        StateHasChanged();
+
+        var (detay, _) = await ApiService.GetLogDetailWithErrorAsync(id);
+        _seciliDetay = detay;
+
+        _detayYukleniyor = false;
+        StateHasChanged();
+    }
+
+    private void ModalKapat()
+    {
+        _detayModalAcik = false;
+        _seciliDetay = null;
+    }
+
+    private async Task DownloadPdf()
+    {
+        if (_seciliDetay is null) return;
+
+        _pdfYukleniyor = true;
+        StateHasChanged();
+
+        try
+        {
+            var pdfBytes = PdfService.GenerateReport(
+                _seciliDetay.PredictionResponse,
+                _seciliDetay.PatientInput,
+                _kullanici ?? "Doktor"
+            );
+
+            var base64 = Convert.ToBase64String(pdfBytes);
+            var dosyaAdi = $"CDSS_Rapor_{_seciliDetay.PatientInput.HastaId}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+            await JS.InvokeVoidAsync("downloadFile", dosyaAdi, "application/pdf", base64);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"PDF hatası: {ex.Message}");
+        }
+        finally
+        {
+            _pdfYukleniyor = false;
+            StateHasChanged();
+        }
+    }
+
+    // ─── Yardımcı ─────────────────────────────────────────────────────────────
+
+    private List<LabelCardModel> BuildLabelCards(PredictionResponse r)
+    {
+        var shapMap = r.ShapAciklamalari ?? new();
+        var tahmin  = r.Tahmin ?? new();
+        return LabelOrder
+            .Where(k => tahmin.ContainsKey(k))
+            .Select(k => new LabelCardModel
+            {
+                Key          = k,
+                GoruntuAdi   = tahmin[k].GoruntuAdi ?? k,
+                Karar        = tahmin[k].Karar,
+                Olasilik     = tahmin[k].Olasilik,
+                TopFaktorler = shapMap.TryGetValue(k, out var s) ? s.TopFaktorler : [],
+            })
+            .ToList();
+    }
+
+    private static MarkupString LabelIcon(string key) => new MarkupString(key switch
+    {
+        "ftr"             => "<i class=\"ph-duotone ph-person-simple-walk\"></i>",
+        "aile_hekimligi"  => "<i class=\"ph-duotone ph-hospital\"></i>",
+        "sistemik_tedavi" => "<i class=\"ph-duotone ph-pill\"></i>",
+        "bsa"             => "BSA Yüzdesi",
+        _                 => "<i class=\"ph-bold ph-flask\"></i>",
+    });
+
+    private static string MaskId(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return "—";
+        if (id.Length <= 4) return id;
+        return id[..2] + new string('*', id.Length - 4) + id[^2..];
+    }
+
+    private static string FormatTarih(string ts)
+    {
+        if (DateTime.TryParse(ts, out var dt))
+            return dt.ToString("dd.MM.yyyy HH:mm");
+        return ts;
+    }
+
+    private static RenderFragment KararBadge(bool karar) => karar
+        ? @<span class="badge-evet"><i class="ph-bold ph-check"></i></span>
+        : @<span class="badge-hayir"><i class="ph-bold ph-x"></i></span>;
+
+    private MarkupString HtmlCheckVar => new MarkupString("<i class=\"ph-bold ph-check\"></i> Var");
+    private MarkupString HtmlCrossYok => new MarkupString("<i class=\"ph-bold ph-x\"></i> Yok");
+    private MarkupString HtmlCheckKullanici => new MarkupString("<i class=\"ph-bold ph-check\"></i> Kullanıyor");
+}

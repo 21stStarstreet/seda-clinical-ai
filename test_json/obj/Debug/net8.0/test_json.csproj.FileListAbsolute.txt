@@ -1,0 +1,14 @@
+/Users/mustafatiras/Projects/dermatology_project/test_json/bin/Debug/net8.0/test_json
+/Users/mustafatiras/Projects/dermatology_project/test_json/bin/Debug/net8.0/test_json.deps.json
+/Users/mustafatiras/Projects/dermatology_project/test_json/bin/Debug/net8.0/test_json.runtimeconfig.json
+/Users/mustafatiras/Projects/dermatology_project/test_json/bin/Debug/net8.0/test_json.dll
+/Users/mustafatiras/Projects/dermatology_project/test_json/bin/Debug/net8.0/test_json.pdb
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.GeneratedMSBuildEditorConfig.editorconfig
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.AssemblyInfoInputs.cache
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.AssemblyInfo.cs
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.csproj.CoreCompileInputs.cache
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.dll
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/refint/test_json.dll
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.pdb
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/test_json.genruntimeconfig.cache
+/Users/mustafatiras/Projects/dermatology_project/test_json/obj/Debug/net8.0/ref/test_json.dll

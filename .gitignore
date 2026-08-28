@@ -1,0 +1,56 @@
+# Gizli dosyalar
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Sanal ortam
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Veri dosyaları — Gerçek hasta verisi asla git'e girmez!
+data/raw/
+data/processed/
+*.csv
+*.xlsx
+*.parquet
+
+# Model artifact'ları (büyük dosyalar)
+models/artifacts/
+*.pkl
+*.joblib
+*.model
+*.json.gz
+
+# Loglar
+*.log
+logs/
+audit.db
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Raporlar
+reports/*.png
+reports/*.html

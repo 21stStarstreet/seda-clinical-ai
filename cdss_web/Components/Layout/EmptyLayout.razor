@@ -1,0 +1,13 @@
+@* 
+    EmptyLayout.razor — Boş Düzen (Layout)
+    
+    Öğrenme notu:
+    - Blazor'da her sayfa bir "Layout" içinde gösterilir.
+    - MainLayout → Sidebar + Header içerir. Normal sayfalar için.
+    - EmptyLayout → Sadece @Body. Login sayfası için ideal.
+    - @inherits LayoutComponentBase → Blazor'a "bu bir layout bileşeni" der.
+    - @Body → child component (yani Login.razor) burada render edilir.
+*@
+@inherits LayoutComponentBase
+
+@Body

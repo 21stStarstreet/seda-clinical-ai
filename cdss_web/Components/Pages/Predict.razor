@@ -9,7 +9,7 @@
 
 <div class="page-header">
     <h2>Hasta Değerlendirme</h2>
-    <p>Hasta bilgilerini doldurun, sistem uygun birimlere yönlendirme önersin.</p>
+    <p>Klinik bulgularını girerek sistemin yönlendirme önerisini alın.</p>
 </div>
 
 @if (_errorMessage is not null)
@@ -29,221 +29,66 @@
         <EditForm Model="_patient" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
 
-@* ─── TC ARAMA SATIRI ───────────────────────────────────────────────────────── *@
-<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;">
-
-    @* Sol: TC + Kişisel Bilgiler *@
-    <div style="flex:1;">
-        @* TC Kimlik No *@
-        <div class="form-group" style="margin-bottom:14px;">
-            <label class="form-label">
-                <i class="ph ph-identification-card"></i> TC Kimlik No
-                @if (_tcSearching) { <span style="color:var(--accent);font-size:11px;"> Aranıyor...</span> }
-                @if (_patientFound == true) { <span style="color:var(--success);font-size:11px;"> ✓ Kayıtlı hasta</span> }
-                @if (_patientFound == false) { <span style="color:var(--warning);font-size:11px;"> Yeni hasta</span> }
-            </label>
-            <div style="position:relative; display:flex; align-items:center;">
-                <input type="text"
-                       class="form-input"
-                       placeholder="Hastanın kayıtlarını anlayabilmek için: 11 haneli TC kimlik numarası"
-                       maxlength="11"
-                       @bind-value="TcNo"
-                       @bind-value:event="oninput"
-                       style="font-family:monospace;letter-spacing:2px;padding-right:100px;flex:1;" />
-                <button type="button"
-                        class="btn-tc-search"
-                        @onclick="ForceSearchTc"
-                        disabled="@_tcSearching">
-                    @if (_tcSearching)
-                    {
-                        <i class="ph ph-circle-notch" style="animation:spin 1s linear infinite;"></i>
-                    }
-                    else
-                    {
-                        <i class="ph ph-magnifying-glass"></i>
-                    }
-                    <span>Ara</span>
+            <!-- Hasta Bilgileri — Açılır/Kapanır -->
+            <div class="collapsible-section" style="margin-bottom:20px;">
+                <button type="button" class="collapsible-header" @onclick="@(() => _kimlikAcik = !_kimlikAcik)">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <i class="ph ph-user"></i>
+                        Hasta Bilgileri
+                        <span style="font-size:12px;font-weight:500;color:var(--text-secondary);font-style:italic;">(isteğe bağlı)</span>
+                        @if (!string.IsNullOrWhiteSpace(_patient.HastaAdi))
+                        {
+                            <span style="font-size:11px;color:var(--accent);">· @_patient.HastaAdi</span>
+                        }
+                    </span>
+                    <i class="ph @(_kimlikAcik ? "ph-caret-up" : "ph-caret-down")" style="color:var(--text-muted);"></i>
                 </button>
-            </div>
-            @if (_tcError is not null)
-            {
-                <span class="validation-message">@_tcError</span>
-            }
-        </div>
 
-        @* Kişisel Bilgiler — sadece TC doğrulandıktan sonra göster *@
-        @if (_patientFound != null)
-        {
-        <div class="form-grid" style="margin-bottom:14px;">
-            <div class="form-group full-width">
-                <label class="form-label">Ad Soyad</label>
-                <InputText class="form-input"
-                           placeholder="Hasta adı ve soyadı"
-                           @bind-Value="_patient.HastaAdi"
-                           disabled="@_identityFieldsDisabled" />
-                <ValidationMessage class="validation-message" For="@(() => _patient.HastaAdi)" />
-            </div>
-        </div>
-
-        <div class="form-grid" style="margin-bottom:14px;">
-            <div class="form-group">
-                <label class="form-label">Doğum Tarihi</label>
-                @if (string.IsNullOrEmpty(_identity.DogumTarihi))
+                @if (_kimlikAcik)
                 {
-                    <input type="text" class="form-input"
-                           placeholder="--/--/----"
-                           onfocus="(this.type='date')"
-                           onblur="(this.type=this.value?'date':'text')"
-                           @onchange="OnDogumTarihiChanged"
-                           disabled="@_identityFieldsDisabled" />
-                }
-                else
-                {
-                    <input type="date" class="form-input"
-                           value="@_identity.DogumTarihi"
-                           @onchange="OnDogumTarihiChanged"
-                           disabled="@_identityFieldsDisabled" />
-                }
-            </div>
-            <div class="form-group">
-                <label class="form-label">Cinsiyet</label>
-                <select class="form-input"
-                        value="@_identity.Cinsiyet"
-                        @onchange="@(e => _identity.Cinsiyet = e.Value?.ToString())"
-                        disabled="@_identityFieldsDisabled">
-                    <option value="">Seçiniz</option>
-                    <option value="Erkek">Erkek</option>
-                    <option value="Kadın">Kadın</option>
-                    <option value="Belirtilmedi">Belirtilmedi</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-grid" style="margin-bottom:14px;">
-            <div class="form-group">
-                <label class="form-label">Telefon <span style="color:var(--text-muted)">(isteğe bağlı)</span></label>
-                <div class="phone-input-wrapper">
-                    <select class="phone-country-select"
-                            @bind="_phoneCountryCode"
-                            disabled="@_identityFieldsDisabled">
-                        <option value="+90">🇹🇷 +90</option>
-                        <option value="+1">🇺🇸 +1</option>
-                        <option value="+44">🇬🇧 +44</option>
-                        <option value="+49">🇩🇪 +49</option>
-                        <option value="+33">🇫🇷 +33</option>
-                        <option value="+39">🇮🇹 +39</option>
-                        <option value="+34">🇪🇸 +34</option>
-                    </select>
-                    <input type="tel"
-                           class="form-input phone-number-input"
-                           placeholder="532 123 45 67"
-                           value="@_phoneDisplay"
-                           @oninput="OnPhoneInput"
-                           disabled="@_identityFieldsDisabled" />
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Kan Grubu <span style="color:var(--text-muted)">(isteğe bağlı)</span></label>
-                <select class="form-input"
-                        value="@_identity.KanGrubu"
-                        @onchange="@(e => _identity.KanGrubu = e.Value?.ToString())"
-                        disabled="@_identityFieldsDisabled">
-                    <option value="">Seçiniz</option>
-                    <option>A Rh+</option><option>A Rh-</option>
-                    <option>B Rh+</option><option>B Rh-</option>
-                    <option>AB Rh+</option><option>AB Rh-</option>
-                    <option>0 Rh+</option><option>0 Rh-</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-grid" style="margin-bottom:14px;">
-            <div class="form-group">
-                <label class="form-label">İlk Psoriazis Tanı Tarihi <span style="color:var(--text-muted)">(isteğe bağlı)</span></label>
-                @if (string.IsNullOrEmpty(_identity.IlkTaniTarihi))
-                {
-                    <input type="text" class="form-input"
-                           placeholder="--/--/----"
-                           onfocus="(this.type='date')"
-                           onblur="(this.type=this.value?'date':'text')"
-                           @onchange="@(e => _identity.IlkTaniTarihi = e.Value?.ToString())"
-                           disabled="@_identityFieldsDisabled" />
-                }
-                else
-                {
-                    <input type="date" class="form-input"
-                           value="@_identity.IlkTaniTarihi"
-                           @onchange="@(e => _identity.IlkTaniTarihi = e.Value?.ToString())"
-                           disabled="@_identityFieldsDisabled" />
-                }
-            </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom:14px;">
-            <label class="form-label">Hekim Notu <span style="color:var(--text-muted)">(isteğe bağlı)</span></label>
-            <textarea class="form-input"
-                      placeholder="Klinik gözlemler, ek notlar..."
-                      rows="2"
-                      value="@_identity.HekimNotu"
-                      @onchange="@(e => _identity.HekimNotu = e.Value?.ToString())"
-                      disabled="@_identityFieldsDisabled"
-                      style="resize:vertical;"></textarea>
-        </div>
-        } @* end: _patientFound != null *@
-    </div>
-
-    @* Sağ: Son Ziyaret Paneli (sadece kayıtlı hastada göster) *@
-    @if (_patientFound == true && _patientVisits.Any())
-    {
-        <div style="width:260px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;max-height:600px;">
-            <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                <i class="ph ph-clock-counter-clockwise"></i> Ziyaret Geçmişi (@_patientVisits.Count)
-            </div>
-            <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px;">
-                @foreach (var visit in _patientVisits)
-                {
-                    <div style="border:1px solid var(--border-light);border-radius:6px;padding:10px;background:var(--bg-primary);">
-                        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">
-                            @(DateTime.TryParse(visit.Timestamp, out var ld) ? ld.ToString("dd.MM.yyyy HH:mm") : "-")
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
-                            <div style="display:flex;justify-content:space-between;font-size:11px;">
-                                <span>FTR</span>
-                                <span style="@(visit.Tahmin.Ftr ? "color:var(--success)" : "color:var(--text-muted)")">
-                                    @(visit.Tahmin.Ftr ? "✓ Önerildi" : "—")
-                                </span>
+                    <div class="collapsible-body fade-in">
+                        <div class="form-grid" style="margin-bottom:16px;">
+                            <div class="form-group">
+                                <label class="form-label">Ad Soyad</label>
+                                <InputText class="form-input"
+                                           placeholder="Klinikteki dosya adı veya kod isim…"
+                                           @bind-Value="_patient.HastaAdi" />
                             </div>
-                            <div style="display:flex;justify-content:space-between;font-size:11px;">
-                                <span>Aile Hekimi</span>
-                                <span style="@(visit.Tahmin.AileHekimligi ? "color:var(--success)" : "color:var(--text-muted)")">
-                                    @(visit.Tahmin.AileHekimligi ? "✓ Önerildi" : "—")
-                                </span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;font-size:11px;">
-                                <span>Sist. Tedavi</span>
-                                <span style="@(visit.Tahmin.SistemikTedavi ? "color:var(--success)" : "color:var(--text-muted)")">
-                                    @(visit.Tahmin.SistemikTedavi ? "✓ Önerildi" : "—")
-                                </span>
+                            <div class="form-group">
+                                <label class="form-label">Cinsiyet</label>
+                                <select class="form-input" @bind="_cinsiyet">
+                                    <option value="">Belirtilmedi</option>
+                                    <option value="Erkek">Erkek</option>
+                                    <option value="Kadın">Kadın</option>
+                                </select>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-ghost" style="width:100%;font-size:11px;padding:4px;" @onclick="() => DetayGoster(visit.Id)">
-                            <i class="ph ph-magnifying-glass"></i> Detayları Gör
-                        </button>
+
+                        <div class="form-grid" style="margin-bottom:16px;">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Doğum Tarihi
+                                    <span style="color:var(--text-muted);font-weight:400;font-size:11px;">yaş otomatik hesaplanır</span>
+                                </label>
+                                <input type="date" class="form-input"
+                                       value="@_dogumTarihi"
+                                       @onchange="OnDogumTarihiChanged" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">İlk Psoriazis Tanı Tarihi</label>
+                                <input type="date" class="form-input"
+                                       value="@_ilkTaniTarihi"
+                                       @onchange="@(e => _ilkTaniTarihi = e.Value?.ToString())" />
+                            </div>
+                        </div>
+
                     </div>
                 }
             </div>
-            <a href="/audit-log?tc=@_currentTcHash"
-               style="display:block;text-align:center;font-size:11px;color:var(--accent);text-decoration:none;padding:6px;border:1px solid var(--accent-dim);border-radius:6px;margin-top:12px;">
-                <i class="ph ph-list-bullets"></i> Tümünü Loglarda Gör
-            </a>
-        </div>
-    }
-</div>
 
-            @* Klinik form — sadece TC doğrulandıktan sonra göster *@
-            @if (_patientFound != null)
-            {
-            <!-- Psoriazis Tipi -->
+            <hr style="border:none;border-top:1px solid var(--border);margin:0 0 20px;" />
+
+
             <div class="form-grid" style="margin-bottom:20px;">
                 <div class="form-group full-width">
                     <label class="form-label">Psoriazis Tipi</label>
@@ -257,6 +102,8 @@
                     <ValidationMessage class="validation-message" For="@(() => _patient.PsoriazisTipi)" />
                 </div>
             </div>
+
+            <!-- Klinik Bulgular -->
             <div style="margin-bottom:20px;">
                 <div class="card-title" style="margin-bottom:12px;">Klinik Bulgular</div>
                 <div class="toggle-group">
@@ -295,7 +142,7 @@
                 </div>
             </div>
 
-            <!-- Sayısal Değerler -->
+            <!-- Ölçüm Değerleri -->
             <div class="card-title" style="margin-bottom:12px;">Ölçüm Değerleri</div>
             <div class="form-grid" style="margin-bottom:20px;">
 
@@ -306,9 +153,7 @@
                     <InputNumber class="form-input"
                                  placeholder="Örn: 7.5"
                                  @bind-Value="_patient.PasiSkoru" />
-                    <span class="form-hint">
-                        @PasiLabel(_patient.PasiSkoru)
-                    </span>
+                    <span class="form-hint">@PasiLabel(_patient.PasiSkoru)</span>
                     <ValidationMessage class="validation-message" For="@(() => _patient.PasiSkoru)" />
                 </div>
 
@@ -369,6 +214,19 @@
 
             </div>
 
+            <!-- Hekim Notu -->
+            <div class="form-group" style="margin-bottom:24px;">
+                <label class="form-label">
+                    Hekim Notu
+                    <span style="font-size:12px;font-weight:500;color:var(--text-secondary);font-style:italic;">(isteğe bağlı)</span>
+                </label>
+                <textarea class="form-input"
+                          placeholder="Klinik gözlemler, ek notlar (Bu not PDF raporuna eklenecektir)…"
+                          rows="3"
+                          @bind="_hekimNotu"
+                          style="resize:vertical;"></textarea>
+            </div>
+
             <!-- Submit -->
             <div style="display:flex;gap:12px;align-items:center;">
                 <button type="submit" class="btn btn-primary" disabled="@_loading">
@@ -387,7 +245,6 @@
                     Temizle
                 </button>
             </div>
-            } @* end: _patientFound != null (klinik form) *@
 
         </EditForm>
     </div>
@@ -402,9 +259,11 @@
                 Değerlendirme Sonucu
             </h3>
             <p style="font-size:13px;color:var(--text-secondary);margin-top:2px;">
-                Hasta: <strong style="color:var(--accent);">@(string.IsNullOrWhiteSpace(_patient.HastaAdi) ? "Belirtilmemiş" : _patient.HastaAdi)</strong>
-                <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">(@_result.HastaId)</span>
-                &nbsp;·&nbsp; Audit #@_result.AuditId
+                @if (!string.IsNullOrWhiteSpace(_patient.HastaAdi))
+                {
+                    <span>Hasta: <strong style="color:var(--accent);">@_patient.HastaAdi</strong> &nbsp;·&nbsp; </span>
+                }
+                Audit #@_result.AuditId
                 &nbsp;·&nbsp; @_result.IslemSuresiMs?.ToString("F0") ms
             </p>
             <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
@@ -441,7 +300,7 @@
                 <span><i class="ph-fill ph-warning-circle"></i></span> ACİL DERMATOLOJİ UYARISI
             </h4>
             <p style="margin:0;font-size:13px;color:var(--text-primary);line-height:1.5;">
-                Hastanın PASI skoru oldukça yüksek (>20). Eritrodermik veya çok şiddetli psoriazis şüphesi olabilir. Acil tıbbi müdahale ve/veya sistemik tedaviye hızlı başlangıç gerekebilir. Lütfen hastayı önceliklendiriniz.
+                Hastanın PASI skoru oldukça yüksek (&gt;20). Eritrodermik veya çok şiddetli psoriazis şüphesi olabilir. Acil tıbbi müdahale ve/veya sistemik tedaviye hızlı başlangıç gerekebilir. Lütfen hastayı önceliklendiriniz.
             </p>
         </div>
     }
@@ -501,7 +360,7 @@
     <!-- LLM Açıklama -->
     @if (!string.IsNullOrWhiteSpace(_result.LlmAciklamasi))
     {
-        <div class="llm-box fade-in">
+        <div id="llmBoxPanel" class="llm-box fade-in">
             <div class="llm-box-header">
                 @if (_result.LlmFallbackUsed)
                 {
@@ -511,10 +370,37 @@
                 else
                 {
                     <strong style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-robot"></i> Yapay Zeka Açıklaması</strong>
-                    <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Gemini Flash &middot; Model @(_result.ModelVersiyonu)</span>
+                    @if (!string.IsNullOrWhiteSpace(_result.LlmOzet))
+                    {
+                        <button type="button" class="btn-summarize" @onclick="ToggleOzet">
+                            @if (_ozetGoster)
+                            {
+                                <i class="ph-bold ph-article" style="margin-right:5px;"></i><span>Tam Metni Göster</span>
+                            }
+                            else
+                            {
+                                <i class="ph-bold ph-lightning" style="margin-right:5px;"></i><span>Metni Özetle</span>
+                            }
+                        </button>
+                    }
                 }
             </div>
-            <div class="llm-text">@_result.LlmAciklamasi</div>
+            <div class="llm-body-wrapper @(_ozetGoster ? "is-summary" : "is-detail")">
+                <div class="llm-body-inner">
+                    @if (_ozetGoster && !string.IsNullOrWhiteSpace(_result.LlmOzet))
+                    {
+                        <div class="llm-text summary-text fade-scale-in">
+                            @_result.LlmOzet
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="llm-text detail-text fade-scale-in">
+                            @_result.LlmAciklamasi
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     }
 
@@ -547,247 +433,43 @@
     private string? _errorMessage;
     private bool _pdfYukleniyor = false;
     private string? _doktorAdi;
-    private List<AuditLogEntry> _pastEvaluations = new();
 
-    // ─── TC Kimlik Arama State ────────────────────────────────────────────────
-    private PatientIdentityModel _identity = new();
-    private bool _identityFieldsDisabled = true;   // TC girilene kadar kilitli
-    private bool? _patientFound = null;            // null=henüz arama yok, true=bulundu, false=bulunamadı
-    private bool _tcSearching = false;
-    private string? _tcError;
-    private string? _currentTcHash;
-    private List<PatientVisitSummary> _patientVisits = new();
+    // --- Accordion State ---
+    private bool _kimlikAcik = false;
+    private bool _ozetGoster = false;
 
-    
-
-    private string _phoneCountryCode = "+90";
-    private string _phoneDisplay = "";
-
-    private void OnPhoneInput(ChangeEventArgs e)
+    private async Task ToggleOzet()
     {
-        var val = e.Value?.ToString() ?? "";
-        var digits = new string(val.Where(char.IsDigit).ToArray());
-        if (digits.Length > 10) digits = digits[..10];
-        var formatted = "";
-        for (int i = 0; i < digits.Length; i++)
-        {
-            if (i == 3 || i == 6 || i == 8) formatted += " ";
-            formatted += digits[i];
-        }
-        _phoneDisplay = formatted;
-        _identity.Telefon = string.IsNullOrEmpty(digits) ? null : $"{_phoneCountryCode}{digits}";
-    }
-
-    private void ParsePhoneForDisplay(string? fullPhone)
-    {
-        if (string.IsNullOrEmpty(fullPhone))
-        {
-            _phoneDisplay = "";
-            _phoneCountryCode = "+90";
-            return;
-        }
-        if (fullPhone.StartsWith("+"))
-        {
-            for (int i = 5; i >= 2; i--)
-            {
-                if (fullPhone.Length > i)
-                {
-                    _phoneCountryCode = fullPhone.Substring(0, i);
-                    OnPhoneInput(new ChangeEventArgs { Value = fullPhone.Substring(i) });
-                    return;
-                }
-            }
-        }
-        OnPhoneInput(new ChangeEventArgs { Value = fullPhone });
-    }
-
-    private bool _detayModalAcik = false;
-    private bool _detayYukleniyor = false;
-    private AuditLogDetailResponse? _seciliDetay;
-
-    private async Task DetayGoster(int id)
-    {
-        _detayModalAcik = true;
-        _detayYukleniyor = true;
-        _seciliDetay = null;
+        _ozetGoster = !_ozetGoster;
         StateHasChanged();
-
-        var (detay, _) = await ApiService.GetLogDetailWithErrorAsync(id);
-        _seciliDetay = detay;
-
-        _detayYukleniyor = false;
-        StateHasChanged();
+        await JS.InvokeVoidAsync("animateHeightTransition", "llmBoxPanel", 450);
     }
 
-    private void ModalKapat()
-    {
-        _detayModalAcik = false;
-        _seciliDetay = null;
-    }
+    // --- İsteğe Bağlı Kimlik State ---
+    private string _cinsiyet = "";
+    private string? _dogumTarihi;
+    private string? _ilkTaniTarihi;
+    private string? _hekimNotu;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        // Doktor adını al (PDF rapora yazmak için)
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         _doktorAdi = state.User.Identity?.Name ?? "Bilinmeyen Hekim";
     }
 
-    private async Task CheckPastEvaluations()
-    {
-        if (string.IsNullOrWhiteSpace(_patient.HastaAdi))
-        {
-            _pastEvaluations.Clear();
-            return;
-        }
-
-        var (logs, error) = await ApiService.GetLogsWithErrorAsync(100);
-        if (error == null && logs != null)
-        {
-            _pastEvaluations = logs
-                .Where(l => !string.IsNullOrEmpty(l.HastaAdi) && l.HastaAdi.Equals(_patient.HastaAdi, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(l => l.Timestamp)
-                .ToList();
-        }
-    }
-
-    private string TcNo
-    {
-        get => _identity.TcNo;
-        set
-        {
-            var tc = new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
-            if (tc.Length > 11) tc = tc[..11];
-            _identity.TcNo = tc;
-            HandleTcChange(tc);
-        }
-    }
-
-    // ─── TC Arama Metodu ──────────────────────────────────────────────────────
-    private void HandleTcChange(string tc)
-    {
-        // 11 haneden azsa: sessiz kal, hiç render etme, odak gitmesin
-        if (tc.Length < 11)
-        {
-            // Eğer daha önce form açılmışsa (geri silindi) onu kapat — ama sadece o zaman render et
-            if (_patientFound != null)
-            {
-                _patientFound = null;
-                _patientVisits.Clear();
-                _currentTcHash = null;
-                _patient = new PatientInputModel();
-                _tcError = null;
-                // _identity'yi yeniden OLUŞTURMA — sadece TcNo'yu güncelle (zaten üstte yapıldı)
-                _identityFieldsDisabled = true;
-                StateHasChanged();
-            }
-            return;
-        }
-
-        // Tam 11 hane — doğrulama
-        if (!ValidateTc(tc))
-        {
-            _tcError = "Geçersiz TC Kimlik No.";
-            _identityFieldsDisabled = true;
-            StateHasChanged();
-            return;
-        }
-
-        // Geçerli TC — API'de ara
-        _tcError = null;
-        _tcSearching = true;
-        StateHasChanged();
-        _ = SearchPatientAsync(tc);
-    }
-
-    // ─── Manuel Arat Butonu ────────────────────────────────────────────────────
-    private void ForceSearchTc()
-    {
-        var tc = _identity.TcNo ?? string.Empty;
-        if (string.IsNullOrEmpty(tc) || _tcSearching) return;
-
-        _tcError = null;
-        _tcSearching = true;
-        StateHasChanged();
-        _ = SearchPatientAsync(tc);
-    }
-
-    private async Task SearchPatientAsync(string tc)
-    {
-        var (patient, searchError) = await ApiService.SearchPatientAsync(tc);
-        _tcSearching = false;
-
-        if (searchError is not null)
-        {
-            _tcError = searchError;
-            _identityFieldsDisabled = true;
-            StateHasChanged();
-            return;
-        }
-
-        if (patient is not null)
-        {
-            // Kayıtlı hasta bulundu — bilgileri otomatik doldur, readonly yap
-            _patientFound = true;
-            _currentTcHash = patient.TcHash;
-            _identity.AdSoyad = patient.AdSoyad;
-            _identity.DogumTarihi = patient.DogumTarihi;
-            _identity.Cinsiyet = patient.Cinsiyet;
-            _identity.Telefon = patient.Telefon;
-            ParsePhoneForDisplay(patient.Telefon);
-            _identity.KanGrubu = patient.KanGrubu;
-            _identity.IlkTaniTarihi = patient.IlkTaniTarihi;
-            _identity.HekimNotu = patient.HekimNotu;
-            _patient = new PatientInputModel();
-            _patient.HastaAdi = patient.AdSoyad;
-            CalculateAge(patient.DogumTarihi);
-            _identityFieldsDisabled = true;  // readonly: mevcut hasta
-
-            // Tüm ziyaretleri yükle
-            _patientVisits = await ApiService.GetPatientVisitsAsync(patient.TcHash);
-        }
-        else
-        {
-            // Yeni hasta — tüm alanları aç
-            _patientFound = false;
-            _currentTcHash = null;
-            _patientVisits.Clear();
-            _identity = new PatientIdentityModel { TcNo = tc };
-            _patient = new PatientInputModel();
-            _phoneDisplay = "";
-            _phoneCountryCode = "+90";
-            _identityFieldsDisabled = false;
-        }
-
-        StateHasChanged();
-    }
-
-    // Türk TC Kimlik No checksum doğrulama
-    private static bool ValidateTc(string tc)
-    {
-        if (tc.Length != 11 || !tc.All(char.IsDigit) || tc[0] == '0') return false;
-        var d = tc.Select(c => int.Parse(c.ToString())).ToArray();
-        int s1 = d[0] + d[2] + d[4] + d[6] + d[8];
-        int s2 = d[1] + d[3] + d[5] + d[7];
-        int d10 = (s1 * 7 - s2) % 10;
-        int d11 = (d.Take(10).Sum()) % 10;
-        return d[9] == d10 && d[10] == d11;
-    }
-
     private void OnDogumTarihiChanged(ChangeEventArgs e)
     {
-        var dateStr = e.Value?.ToString();
-        _identity.DogumTarihi = dateStr;
-        CalculateAge(dateStr);
-    }
-
-    private void CalculateAge(string? dateStr)
-    {
-        if (DateTime.TryParse(dateStr, out var dob))
+        _dogumTarihi = e.Value?.ToString();
+        if (DateTime.TryParse(_dogumTarihi, out var dob))
         {
             var age = DateTime.Today.Year - dob.Year;
             if (dob.Date > DateTime.Today.AddYears(-age)) age--;
-            _patient.Yas = age > 0 ? age : 0;
+            _patient.Yas = age > 0 ? age : null;
+        }
+        else
+        {
+            _patient.Yas = null;
         }
     }
 
@@ -796,34 +478,6 @@
         _loading = true;
         _errorMessage = null;
         StateHasChanged();
-
-        // Yeni hasta ise önce kimlik kaydı oluştur
-        if (_patientFound == false && !string.IsNullOrWhiteSpace(_identity.TcNo))
-        {
-            // AdSoyad input'u formda _patient.HastaAdi'ne bağlı olduğu için kimlik modeline kopyalıyoruz
-            _identity.AdSoyad = _patient.HastaAdi;
-
-            var (savedPatient, saveError) = await ApiService.CreatePatientAsync(_identity);
-            if (saveError is not null)
-            {
-                _errorMessage = $"Hasta kaydedilemedi: {saveError}";
-                _loading = false;
-                StateHasChanged();
-                return;
-            }
-            if (savedPatient is not null)
-            {
-                _currentTcHash = savedPatient.TcHash;
-                _patientFound = true;
-            }
-        }
-
-        // Mevcut hastaysa veya yeni kaydedildiyse HastaAdi'ni identity'den güncelle
-        if (!string.IsNullOrWhiteSpace(_identity.AdSoyad))
-            _patient.HastaAdi = _identity.AdSoyad;
-
-        // TC hash'i tahmin isteğine ekle — audit log'da bu ziyareti hastaya bağlar
-        _patient.PatientTcHash = _currentTcHash;
 
         var (result, error) = await ApiService.PredictAsync(_patient);
         _loading = false;
@@ -844,31 +498,16 @@
     private void ResetForm()
     {
         _patient = new();
-        _identity = new();
-        _phoneDisplay = "";
-        _phoneCountryCode = "+90";
+        _cinsiyet = "";
+        _dogumTarihi = null;
+        _ilkTaniTarihi = null;
+        _hekimNotu = null;
         _result = null;
         _showResult = false;
         _errorMessage = null;
-        _pastEvaluations.Clear();
-        _patientFound = null;
-        _identityFieldsDisabled = true;
-        _patientVisits.Clear();
-        _currentTcHash = null;
-        _tcError = null;
+        _ozetGoster = false;
     }
 
-    // ─── PDF İndirme ──────────────────────────────────────────────────────────
-    /// <summary>
-    /// PdfReportService ile PDF üretir, JS interop ile tarayıcıya indirir.
-    ///
-    /// Öğrenme notu — Blazor'da dosya indirme:
-    /// Blazor Server'da doğrudan dosya gönderemezsiniz çünkü sunucu tarafında
-    /// çalışıyorsunuz. Bunun yerine:
-    /// 1. C#'ta byte[] üretin
-    /// 2. Base64'e çevirin
-    /// 3. JS'e gönderin → JS, <a download> elementi oluşturur ve tıklar
-    /// </summary>
     private async Task DownloadPdf()
     {
         if (_result is null) return;
@@ -878,14 +517,9 @@
 
         try
         {
-            // 1. PDF'i byte dizisi olarak üret
             var pdfBytes = PdfService.GenerateReport(_result, _patient, _doktorAdi ?? "Hekim");
-
-            // 2. Byte dizisini Base64'e çevir (JS bunu anlayabilir)
             var base64 = Convert.ToBase64String(pdfBytes);
-
-            // 3. JS fonksiyonu çağır — downloadFile fonksiyonu wwwroot/app.js'de tanımlı
-            var dosyaAdi = $"CDSS_Rapor_{_result.HastaId}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+            var dosyaAdi = $"CDSS_Rapor_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
             await JS.InvokeVoidAsync("downloadFile", dosyaAdi, "application/pdf", base64);
         }
         catch (Exception ex)
@@ -898,8 +532,6 @@
             StateHasChanged();
         }
     }
-
-    // ─── Label Kart Builder ───────────────────────────────────────────────────
 
     private static readonly string[] LabelOrder = ["ftr", "aile_hekimligi", "sistemik_tedavi"];
 
@@ -920,8 +552,6 @@
             .ToList();
     }
 
-    // ─── Yardımcı etiketler ───────────────────────────────────────────────────
-
     private static MarkupString LabelIcon(string label) => new MarkupString(label switch
     {
         "ftr"             => "<i class=\"ph-duotone ph-person-simple-walk\"></i>",
@@ -930,7 +560,7 @@
         _                 => "<i class=\"ph-bold ph-flask\"></i>",
     });
 
-       private static string PasiLabel(double? v)
+    private static string PasiLabel(double? v)
     {
         if (!v.HasValue) return "Değer giriniz";
         if (v <= 5)  return $"{v:F1} — Hafif";
@@ -951,18 +581,16 @@
     private static string LdlLabel(double? v)
     {
         if (!v.HasValue) return "Değer giriniz";
-        if (v < 100)  return $"{v:F0} mg/dL — Optimal";
-        if (v < 130)  return $"{v:F0} mg/dL — Normal üst sınır";
-        if (v < 160)  return $"{v:F0} mg/dL — Yüksek (eşik: >130)";
+        if (v < 100) return $"{v:F0} mg/dL — Optimal";
+        if (v < 130) return $"{v:F0} mg/dL — Normal üst sınır";
+        if (v < 160) return $"{v:F0} mg/dL — Yüksek (eşik: >130)";
         return $"{v:F0} mg/dL — Çok yüksek (eşik: >160)";
     }
+
     private static string DlqiLabel(double? v)
     {
-        // "double?" ifadesindeki soru işareti, bu değerin boş (null) olabileceğini söyler.
-        // Eğer değer girilmemişse HasValue "false" döner.
         if (!v.HasValue) return "Değer girilmedi (Opsiyonel)";
-        
-        if (v <= 5) return $"{v:F0} — Hafif etki";
+        if (v <= 5)  return $"{v:F0} — Hafif etki";
         if (v <= 10) return $"{v:F0} — Orta dereceli etki";
         return $"{v:F0} — Kritik etki (eşik: >10)";
     }
@@ -970,8 +598,7 @@
     private static string BsaLabel(double? v)
     {
         if (!v.HasValue) return "Değer girilmedi (Opsiyonel)";
-        
-        if (v <= 5) return $"% {v:F0} — Hafif tutulum";
+        if (v <= 5)  return $"% {v:F0} — Hafif tutulum";
         if (v <= 10) return $"% {v:F0} — Orta yayılım";
         return $"% {v:F0} — Yaygın tutulum (eşik: >%10)";
     }
@@ -979,125 +606,8 @@
     private static string YasLabel(int? v)
     {
         if (!v.HasValue) return "Değer girilmedi (Opsiyonel)";
-        
         if (v < 18) return $"{v} yaş — Pediatrik hasta";
         if (v < 40) return $"{v} yaş — Erken başlangıçlı psoriazis";
         return $"{v} yaş — Geç başlangıçlı / Yetişkin";
     }
-
-    private MarkupString HtmlCheck => new MarkupString("<i class=\"ph-bold ph-check\"></i>");
-    private MarkupString HtmlCross => new MarkupString("<i class=\"ph-bold ph-x\"></i>");
 }
-
-@if (_detayModalAcik)
-{
-    <div class="audit-modal-backdrop" @onclick="ModalKapat">
-        <div class="audit-modal-panel" @onclick:stopPropagation>
-
-            @if (_detayYukleniyor)
-            {
-                <div style="text-align:center;padding:60px;">
-                    <div class="spinner" style="margin:0 auto 16px;"></div>
-                    <p style="color:var(--text-muted);">Detaylar yükleniyor…</p>
-                </div>
-            }
-            else if (_seciliDetay is not null)
-            {
-                var pr = _seciliDetay.PredictionResponse;
-                var pi = _seciliDetay.PatientInput;
-
-                <div class="audit-modal-header">
-                    <div>
-                        <h3 style="font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">
-                            Değerlendirme Detayı
-                        </h3>
-                        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;">
-                             @(string.IsNullOrEmpty(pr.ModelVersiyonu) ? "Model: —" : $"Model {pr.ModelVersiyonu}")
-                        </p>
-                    </div>
-                    <button type="button" class="btn btn-ghost btn-sm" @onclick="ModalKapat">✕</button>
-                </div>
-
-                <div class="audit-section">
-                    <div class="audit-section-title"><i class="ph-bold ph-heartbeat"></i> Hasta Parametreleri</div>
-                    <div class="audit-params-grid">
-                        <div class="audit-param-item">
-                            <span class="audit-param-label">PASI Skoru</span>
-                            <span class="audit-param-value">@(pi.PasiSkoru?.ToString("F1"))</span>
-                        </div>
-                        <div class="audit-param-item">
-                            <span class="audit-param-label">VKİ</span>
-                            <span class="audit-param-value">@(pi.Vki?.ToString("F1")) kg/m²</span>
-                        </div>
-                        <div class="audit-param-item">
-                            <span class="audit-param-label">LDL</span>
-                            <span class="audit-param-value">@(pi.Ldl?.ToString("F0")) mg/dL</span>
-                        </div>
-                        @if (pi.Dlqi.HasValue) {
-                            <div class="audit-param-item"><span class="audit-param-label">DLQI</span><span class="audit-param-value">@pi.Dlqi.Value.ToString("F0")</span></div>
-                        }
-                        @if (pi.Bsa.HasValue) {
-                            <div class="audit-param-item"><span class="audit-param-label">BSA</span><span class="audit-param-value">%@pi.Bsa.Value.ToString("F0")</span></div>
-                        }
-                    </div>
-                </div>
-
-                <div class="audit-section">
-                    <div class="audit-section-title"><i class="ph-bold ph-robot"></i> Yapay Zeka Kararları</div>
-                    <div class="result-grid">
-                        @foreach (var card in BuildLabelCards(pr))
-                        {
-                            <div class="result-card @(card.Karar ? "positive" : "negative")">
-                                <div class="result-card-header" style="margin-bottom:8px;">
-                                    <span class="result-card-icon">@LabelIcon(card.Key)</span>
-                                    <span class="result-badge @(card.Karar ? "badge-yes" : "badge-no")">
-                                        @(card.Karar ? "ÖNERİLİYOR" : "GEREKLİ DEĞİL")
-                                    </span>
-                                </div>
-                                <div class="result-card-title" style="font-size:13px;margin-bottom:8px;">@card.GoruntuAdi</div>
-                                <div class="prob-row">
-                                    <div class="prob-bar-bg" style="height:6px;"><div class="prob-bar-fill @(card.Karar ? "positive-fill" : "negative-fill")" style="width:@(card.OlasilikYuzde)%"></div></div>
-                                    <span class="prob-label" style="font-size:11px;">%@card.OlasilikYuzde</span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
-<style>
-    .audit-modal-backdrop {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(4, 9, 15, 0.85); backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 1000; padding: 20px;
-    }
-    .audit-modal-panel {
-        background: var(--bg-card, #0a131e); border: 1px solid var(--border, #1e2d3d);
-        border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh;
-        overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-    }
-    .audit-modal-header {
-        display: flex; justify-content: space-between; align-items: flex-start;
-        padding: 16px 24px; border-bottom: 1px solid var(--border, #1e2d3d);
-    }
-    .audit-section {
-        padding: 20px 24px; border-bottom: 1px solid var(--border, #1e2d3d);
-    }
-    .audit-section:last-of-type { border-bottom: none; }
-    .audit-section-title {
-        font-size: 13px; font-weight: 600; color: var(--text-muted);
-        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px;
-    }
-    .audit-params-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
-    }
-    .audit-param-item {
-        background: var(--bg-primary, #0d1a27); border: 1px solid var(--border, #1e2d3d);
-        border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
-    }
-    .audit-param-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-    .audit-param-value { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-</style>

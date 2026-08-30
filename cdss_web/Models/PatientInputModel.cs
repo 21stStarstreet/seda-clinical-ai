@@ -9,7 +9,6 @@ namespace cdss_web.Models;
 /// </summary>
 public class PatientInputModel
 {
-    [Required(ErrorMessage = "Hasta Adı zorunludur.")]
     [StringLength(100, ErrorMessage = "Hasta Adı en fazla 100 karakter olabilir.")]
     [JsonPropertyName("hasta_adi")]
     public string HastaAdi { get; set; } = string.Empty;

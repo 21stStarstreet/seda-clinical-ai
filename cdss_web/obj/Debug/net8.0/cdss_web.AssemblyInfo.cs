@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("cdss_web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ac3b99dbfc8f3063417ef7db99dc71e160b3afd6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1a100f3e3081aad37dc53c02880e306670b3ba08")]
 [assembly: System.Reflection.AssemblyProductAttribute("cdss_web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("cdss_web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -924,7 +924,8 @@ select.form-input {
     border-radius: var(--radius);
     padding: 20px 24px;
     margin-top: 20px;
-    animation: fadeSlideIn 0.5s ease 0.3s both;
+    overflow: hidden;
+    will-change: height;
 }
 
 .llm-box-header {
@@ -944,11 +945,89 @@ select.form-input {
     text-transform: uppercase;
 }
 
+.llm-body-wrapper {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.llm-body-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
 .llm-text {
     font-size: 14px;
     line-height: 1.75;
     color: var(--text-secondary);
     white-space: pre-wrap;
+}
+
+.fade-scale-in {
+    animation: fadeScaleIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fadeScaleIn {
+    0% {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.summary-text {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px dashed rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: #ecfdf5;
+    font-weight: 450;
+}
+
+
+
+.btn-summarize {
+    margin-left: auto;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #059669, #0369a1, #10b981, #0369a1);
+    background-size: 300% 300%;
+    animation: flowGreenBlue 4s ease infinite;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    font-family: inherit;
+    user-select: none;
+}
+
+@keyframes flowGreenBlue {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.btn-summarize:hover {
+    box-shadow: 0 5px 16px rgba(16, 185, 129, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+}
+
+.btn-summarize:active {
+    transform: translateY(1px) scale(0.95);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.25);
+    filter: brightness(0.92);
 }
 
 /* ─── Meta Footer ───────────────────────────────────────────────────────────── */
@@ -1596,4 +1675,38 @@ select.form-input {
 
 .phone-number-input {
     flex: 1;
+}
+
+/* ─── Collapsible Section (Hasta Bilgileri Accordion) ────────────────────── */
+.collapsible-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.collapsible-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.collapsible-header:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.collapsible-body {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-primary);
 }

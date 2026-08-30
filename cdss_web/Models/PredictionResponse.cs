@@ -29,6 +29,7 @@ public record PredictionResponse(
     [property: JsonPropertyName("aktif_birimler")]    List<string>? AktifBirimler,
     [property: JsonPropertyName("shap_aciklamalari")] Dictionary<string, ShapExplanation>? ShapAciklamalari,
     [property: JsonPropertyName("llm_aciklamasi")]    string? LlmAciklamasi,
+    [property: JsonPropertyName("llm_ozet")]          string? LlmOzet,
     [property: JsonPropertyName("llm_fallback_used")] bool LlmFallbackUsed,
     [property: JsonPropertyName("model_versiyonu")]   string? ModelVersiyonu,
     [property: JsonPropertyName("islem_suresi_ms")]   double? IslemSuresiMs,

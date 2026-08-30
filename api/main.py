@@ -186,6 +186,7 @@ class PredictionResponse(BaseModel):
     aktif_birimler: list[str]
     shap_aciklamalari: dict
     llm_aciklamasi: str
+    llm_ozet: str
     llm_fallback_used: bool
     model_versiyonu: str
     islem_suresi_ms: float
@@ -274,7 +275,7 @@ async def predict(
     shap_explanation = shap_explainer.explain_single(X, top_n=5)
 
     # 3. LLM Açıklaması
-    llm_text, is_fallback = llm_explainer.explain(prediction, shap_explanation)
+    llm_detayli, llm_ozet, is_fallback = llm_explainer.explain(prediction, shap_explanation)
 
     elapsed_ms = (time.time() - start_time) * 1000
 
@@ -283,7 +284,7 @@ async def predict(
         patient_dict=patient_input.model_dump(),
         prediction=prediction,
         shap_explanation=shap_explanation,
-        llm_text=llm_text,
+        llm_text=llm_detayli,
         llm_fallback_used=is_fallback,
         processing_time_ms=elapsed_ms,
         patient_tc_hash=patient_input.patient_tc_hash,
@@ -307,7 +308,8 @@ async def predict(
             if getattr(prediction.labels, label)
         ],
         shap_aciklamalari=shap_explanation,
-        llm_aciklamasi=llm_text,
+        llm_aciklamasi=llm_detayli,
+        llm_ozet=llm_ozet,
         llm_fallback_used=is_fallback,
         model_versiyonu=prediction.model_version,
         islem_suresi_ms=round(elapsed_ms, 2),

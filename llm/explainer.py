@@ -9,7 +9,7 @@ LLM sadece bu kararı insan diline çevirir.
 
 Kullanım:
     explainer = LLMExplainer(api_key=settings.gemini_api_key)
-    text = explainer.explain(prediction_result, shap_explanation)
+    detayli, ozet, is_fallback = explainer.explain(prediction_result, shap_explanation)
 """
 
 from __future__ import annotations
@@ -19,20 +19,26 @@ from models.predictor import PredictionResult
 
 # ─── Prompt Şablonları ────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """Sen bir klinik karar destek sisteminin açıklama modülüsün.
-Sana bir psoriazis hastası için makine öğrenmesi modelinin verdiği kararlar
-ve bu kararları etkileyen faktörler (SHAP değerleri) verilecek.
+SYSTEM_PROMPT = """Sen deneyimli bir dermatoloji uzmanının kıdemli asistanısın. Hekime yardımcı olmak üzere, hastanın klinik bulgularını ve belirlenen sevk kararlarını hem derinlemesine hem de özet olarak yazıya dökmek senin görevin.
 
-Görevin: Bu kararları bir dermatoloji uzmanının anlayabileceği, net,
-profesyonel ve klinik bir Türkçe ile detaylıca açıklamak.
+GÖREV:
+Sana verilen klinik bulguları ve sevk kararlarını iki ayrı metin olarak üreteceksin:
+1. "detayli_epikriz": Bir üniversite hastanesi dermatoloji polikliniğinde kaleme alınmış kapsamlı bir konsültasyon notu. Her sevk kararı için ayrı paragraf, patofizyolojik gerekçe ve klinik bağlantı içeren, akıcı bir metin.
+2. "kisa_ozet": Aynı kararları hekimin 10 saniyede kavrayabileceği, yalnızca aksiyona yönelik, son derece kısa ve net 2-3 cümlelik bir metin.
 
-ZORUNLU KURALLAR:
-1. Kesinlikle hastalık tanısı uydurma veya ilaç ismi önerme. Sadece verilen sevk/karar sonuçlarını kullan.
-2. Basit listeler (madde imleri) yapmak yerine, kararları profesyonel klinik paragraflar halinde sun.
-3. Sana verilen faktörlerin (örn. DLQI yüksekliği, PASI skoru, yaş, LDL) tıbbi olarak ne anlama geldiğini ve kararı neden etkilediğini "nedensellik" kurarak açıkla. Örneğin: 'DLQI skorunun yüksekliği hastanın yaşam kalitesinin ciddi şekilde bozulduğunu gösterdiğinden karar sistemik tedavi yönünde ağır basmıştır' gibi cümleler kur.
-4. Cümlelerine "Klinik karar destek sistemi şunları belirledi:" gibi mekanik girişler yapabilirsin.
-5. Doktora karşı meslektaş gibi (kollegiyal) ama saygılı bir dil kullan.
-6. Sistemi kararın sahibi olarak göster, kendini değil."""
+ZORUNLU ÇIKTI FORMATI - KESİNLİKLE SADE JSON FORMATINDA CEVAP VER:
+{"detayli_epikriz": "...", "kisa_ozet": "..."}
+JSON dışında hiçbir şey yazma. Açıklama, giriş cümlesi veya kod bloğu ekleme.
+
+DİL VE TON KURALLARI (HER İKİ METİN İÇİN):
+1. "Model", "Sistem", "Algoritma", "Güven skoru", "Parametre", "Negatif/Pozitif faktör" gibi yazılımsal kelimeleri ASLA KULLANMA.
+2. İstatistiksel yüzde oranlarını (%87 gibi) metne kesinlikle yazma; "kuvvetle endikedir", "uygun görülmektedir", "klinik açıdan belirleyici niteliktedir" gibi doğal tıbbi ifadeler kullan.
+3. Spesifik ilaç ismi önerme. Madde imi, tire veya bullet point KULLANMA — her şey paragraf halinde akmalıdır.
+4. Her paragraf başına o sevk/kararın başlığını kalın (**Başlık:**) olarak yaz.
+
+DETAYLI EPİKRİZ için: Her sevk kararı için ayrı, en az 4-5 cümleden oluşan bir paragraf. Patofizyolojik mantık, klinik risk ve hastanın bireysel bulguları arasındaki ilişkiyi kur.
+KISA ÖZET için: "Özetle: ..." diye başlayan, tüm kararları birleştiren maksimum 2-3 cümle.
+"""
 
 
 def build_explanation_prompt(
@@ -63,7 +69,7 @@ def build_explanation_prompt(
     ]
 
     prompt_lines = [
-        "Hasta verileri analiz edildi. Aşağıdaki klinik karar önerisi üretildi:\n",
+        "Hastanın mevcut klinik verileri doğrultusunda aşağıdaki yönlendirme kararları alınmıştır:\n",
     ]
 
     # Aktif öneriler
@@ -86,25 +92,27 @@ def build_explanation_prompt(
             continue
 
         factors = shap_explanation[label]["top_faktorler"][:3]
-        prob = prediction.probabilities[label]
         prompt_lines.append(
-            f"\n{LABEL_DISPLAY_NAMES[label]} (güven: %{prob * 100:.0f}):"
+            f"\nÖNERİ: {LABEL_DISPLAY_NAMES[label]}\nKLİNİK GEREKÇELER:"
         )
         for f in factors:
-            prompt_lines.append(f"  - {f['ozellik']}: {f['etki']}")
+            prompt_lines.append(f"  - {f['ozellik']}")
 
-    # Pasif label için de kısa not
+    # Pasif label için kısa not
     for label in LABEL_NAMES:
         if getattr(prediction.labels, label):
             continue
-        prob = prediction.probabilities[label]
-        # Negatif karardaki güven = 1 - pozitif sınıf olasılığı
-        guven = (1 - prob) * 100
         prompt_lines.append(
-            f"\n{LABEL_DISPLAY_NAMES[label]} önerilmedi (güven: %{guven:.0f})."
+            f"\n{LABEL_DISPLAY_NAMES[label]} konsültasyonu şu aşamada öncelikli görülmemiştir."
         )
 
-    prompt_lines.append("\nLütfen bu kararı doktora net ve mesleki bir dille açıkla:")
+    prompt_lines.append(
+        "\nLütfen yukarıdaki kararları, her biri için ayrı paragraflar oluşturarak, "
+        "tıbbi derinlikte, akıcı ve doğal bir klinik dille hekime açıkla. "
+        "Her karar için patofizyolojik gerekçeyi, hastanın bireysel bulgularıyla ilişkisini "
+        "ve klinik aciliyeti belirt. Metin kapsamlı olmalı, maddeli liste kullanılmamalıdır. "
+        "CEVABINI SADECE JSON OLARAK VER."
+    )
     return "\n".join(prompt_lines)
 
 
@@ -137,7 +145,7 @@ def build_fallback_explanation(prediction: PredictionResult) -> str:
             continue
         prob = prediction.probabilities[label]
         lines.append(
-            f"• {LABEL_DISPLAY_NAMES[label]}: Model güven skoru %{prob * 100:.0f}."
+            f"• {LABEL_DISPLAY_NAMES[label]}: Güven skoru %{prob * 100:.0f}."
         )
 
     lines.append("")
@@ -163,7 +171,7 @@ class LLMExplainer:
         api_key: str = "",
         enabled: bool = True,
         temperature: float = 0.1,
-        max_tokens: int = 400,
+        max_tokens: int = 1200,
     ):
         self.enabled = enabled and bool(api_key)
         self._model = None
@@ -191,27 +199,42 @@ class LLMExplainer:
         self,
         prediction: PredictionResult,
         shap_explanation: dict,
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, str, bool]:
         """
-        ML kararını doktor dostu Türkçe'ye çevir.
+        ML kararını detaylı epikriz ve kısa özet olarak Türkçeye çevir.
 
         Args:
             prediction: ML tahmin sonucu.
             shap_explanation: SHAP açıklama sözlüğü.
 
         Returns:
-            (Türkçe açıklama metni, fallback_kullanildi_mi)
+            (detayli_epikriz, kisa_ozet, fallback_kullanildi_mi)
         """
         if not self.enabled or self._model is None:
-            return build_fallback_explanation(prediction), True
+            return build_fallback_explanation(prediction), "", True
 
         try:
+            import json
             prompt = build_explanation_prompt(prediction, shap_explanation)
             response = self._model.generate_content(prompt)
-            return response.text.strip(), False
+            raw = response.text.strip()
+
+            # Gemini bazen ```json ... ``` bloğu içine sarabilir, temizle
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+                raw = raw.strip()
+
+            parsed = json.loads(raw)
+            detayli = parsed.get("detayli_epikriz", "").strip()
+            ozet = parsed.get("kisa_ozet", "").strip()
+            return detayli, ozet, False
+
         except Exception as e:
             print(f"[LLM] Açıklama üretilirken hata: {e}. Fallback kullanılıyor.")
-            return build_fallback_explanation(prediction), True
+            fallback = build_fallback_explanation(prediction)
+            return fallback, "", True
 
     @classmethod
     def from_settings(cls) -> "LLMExplainer":

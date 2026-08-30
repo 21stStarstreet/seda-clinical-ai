@@ -46,3 +46,36 @@ function getIdleSeconds() {
 function resetActivity() {
     _lastActivityTime = Date.now();
 }
+
+// ─── Akıcı Yükseklik Animasyonu (Smooth Height Transition) ───────────────────
+function animateHeightTransition(elementId, durationMs = 500) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    // Önceki sabit yüksekliği ölç
+    const prevHeight = el.offsetHeight;
+
+    // Yüksekliği geçici olarak serbest bırakıp yeni yüksekliği ölç
+    el.style.transition = 'none';
+    el.style.height = 'auto';
+    const newHeight = el.offsetHeight;
+
+    // Değişim yoksa çık
+    if (Math.abs(prevHeight - newHeight) < 2) {
+        el.style.height = '';
+        return;
+    }
+
+    // Başlangıç yüksekliğine sabitle
+    el.style.height = prevHeight + 'px';
+    el.offsetHeight; // Reflow zorla
+
+    // Yumuşak geçişi başlat
+    el.style.transition = `height ${durationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+    el.style.height = newHeight + 'px';
+
+    setTimeout(() => {
+        el.style.transition = '';
+        el.style.height = '';
+    }, durationMs);
+}

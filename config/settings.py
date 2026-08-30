@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", description="Gemini API anahtarı")
     llm_enabled: bool = Field(default=True)
     llm_temperature: float = Field(default=0.1)
-    llm_max_tokens: int = Field(default=400)
+    llm_max_tokens: int = Field(default=1200)
 
     # ─── Faz 4: Güvenlik ──────────────────────────────────────────────
     # JWT — Her ortam için özel, rastgele 256-bit anahtar

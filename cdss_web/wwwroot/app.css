@@ -1567,3 +1567,33 @@ select.form-input {
 .btn-tc-search:disabled { opacity: 0.55; cursor: not-allowed; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Telefon Input Wrapper */
+.phone-input-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.phone-country-select {
+    width: 140px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    flex-shrink: 0;
+}
+.phone-country-select:focus {
+    border-color: var(--accent);
+}
+.phone-country-select:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.phone-number-input {
+    flex: 1;
+}

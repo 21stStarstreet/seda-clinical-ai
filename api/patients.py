@@ -33,7 +33,7 @@ def get_audit_logger() -> AuditLogger:
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
 
 class PatientCreate(BaseModel):
-    tc_no: str = Field(..., min_length=11, max_length=11, pattern=r"^\d{11}$")
+    tc_no: str = Field(..., min_length=1, max_length=11)
     ad_soyad: str = Field(..., min_length=2, max_length=150)
     dogum_tarihi: Optional[str] = Field(default=None, description="YYYY-MM-DD")
     cinsiyet: Optional[str] = Field(default=None)

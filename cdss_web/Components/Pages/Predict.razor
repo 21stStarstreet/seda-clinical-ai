@@ -29,6 +29,8 @@
         <EditForm Model="_patient" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
 
+            <fieldset disabled="@_loading" style="border:none;padding:0;margin:0;">
+
             <!-- Hasta Bilgileri — Açılır/Kapanır -->
             <div class="collapsible-section" style="margin-bottom:20px;">
                 <button type="button" class="collapsible-header" @onclick="@(() => _kimlikAcik = !_kimlikAcik)">
@@ -227,21 +229,18 @@
                           style="resize:vertical;"></textarea>
             </div>
 
+            </fieldset>
+
             <!-- Submit -->
             <div style="display:flex;gap:12px;align-items:center;">
-                <button type="submit" class="btn btn-primary" disabled="@_loading">
-                    @if (_loading)
-                    {
-                        <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
-                        <span>Değerlendiriliyor…</span>
-                    }
-                    else
-                    {
+                <button type="submit" class="btn btn-primary btn-morph-submit @(_loading ? "is-loading" : "")" disabled="@_loading" title="@(_loading ? "Değerlendiriliyor…" : "Değerlendir")">
+                    <div class="btn-morph-content">
                         <span>🔬</span>
                         <span>Değerlendir</span>
-                    }
+                    </div>
+                    <div class="btn-morph-spinner"></div>
                 </button>
-                <button type="button" class="btn btn-ghost" @onclick="ResetForm">
+                <button type="button" class="btn btn-ghost" @onclick="ResetForm" disabled="@_loading">
                     Temizle
                 </button>
             </div>
@@ -477,6 +476,7 @@
     {
         _loading = true;
         _errorMessage = null;
+        _patient.HekimNotu = _hekimNotu;
         StateHasChanged();
 
         var (result, error) = await ApiService.PredictAsync(_patient);

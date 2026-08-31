@@ -165,6 +165,7 @@ class PatientInput(BaseModel):
     dlqi: Optional[float] = Field(default=None, ge=0.0, le=30.0)
     bsa: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     yas: Optional[int] = Field(default=None, ge=0, le=120)
+    hekim_notu: Optional[str] = Field(default=None, max_length=1000, description="Hekimin serbest klinik notu")
     # V2 Özellikleri (Nullable)
     eklem_bulgulari: Optional[bool] = None
     onceki_sistemik_yanit: Optional[str] = None
@@ -275,7 +276,9 @@ async def predict(
     shap_explanation = shap_explainer.explain_single(X, top_n=5)
 
     # 3. LLM Açıklaması
-    llm_detayli, llm_ozet, is_fallback = llm_explainer.explain(prediction, shap_explanation)
+    llm_detayli, llm_ozet, is_fallback = llm_explainer.explain(
+        prediction, shap_explanation, hekim_notu=patient_input.hekim_notu
+    )
 
     elapsed_ms = (time.time() - start_time) * 1000
 

@@ -58,6 +58,9 @@ public class PatientInputModel
     [JsonPropertyName("yas")]
     public int? Yas { get; set; }
 
+    [JsonPropertyName("hekim_notu")]
+    public string? HekimNotu { get; set; }
+
     [JsonPropertyName("patient_tc_hash")]
     public string? PatientTcHash { get; set; }
 
@@ -77,5 +80,6 @@ public class PatientInputModel
         ["dlqi"]                  = Dlqi,
         ["bsa"]                   = Bsa,
         ["yas"]                   = Yas,
+        ["hekim_notu"]            = HekimNotu,
     };
 }

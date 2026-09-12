@@ -404,17 +404,75 @@ public class PdfReportService
             });
         }
 
-        // LLM Açıklama
+        // LLM Açıklama — Klinik Karar Epikrizi Kartları (Web Arayüzüyle Birebir Eşleşen Tasarım)
         if (!string.IsNullOrWhiteSpace(result.LlmAciklamasi))
         {
-            col.Item().Column(section =>
+            col.Item().PaddingTop(4).Column(section =>
             {
-                SectionLabel(section, "Klinik Açıklama (Yapay Zeka Yorumu)");
-                section.Item()
-                    .Background(BgGray)
-                    .Padding(12)
-                    .Text(result.LlmAciklamasi)
-                    .FontSize(9).LineHeight(1.55f).FontColor(TextDark);
+                SectionLabel(section, "Klinik Karar Epikrizi (Yapay Zeka Patofizyolojik Değerlendirmesi)");
+
+                var rawText = result.LlmAciklamasi.Trim();
+                var paragraphs = rawText.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var para in paragraphs)
+                {
+                    var trimmed = para.Trim();
+                    if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+                    string title = "Klinik Değerlendirme";
+                    string content = trimmed;
+                    string borderColor = "#0D9488"; // varsayılan teal
+                    string titleColor = "#0F766E";
+                    string bgColor = "#F0FDFA";
+
+                    // Başlık ayrıştırma (**Başlık:**)
+                    if (trimmed.StartsWith("**") && trimmed.Contains("**"))
+                    {
+                        var firstEnd = trimmed.IndexOf("**", 2);
+                        if (firstEnd > 2)
+                        {
+                            title = trimmed.Substring(2, firstEnd - 2).Trim().TrimEnd(':');
+                            content = trimmed.Substring(firstEnd + 2).Trim().TrimStart(':').Trim();
+                        }
+                    }
+
+                    var lowerTitle = title.ToLowerInvariant();
+
+                    if (lowerTitle.Contains("fizik tedavi") || lowerTitle.Contains("ftr") || lowerTitle.Contains("romatoloji") && !lowerTitle.Contains("önerilmeme") && !lowerTitle.Contains("değerlendirmesi"))
+                    {
+                        borderColor = "#0891B2"; // Cyan
+                        titleColor = "#0E7490";
+                        bgColor = "#F0FDFA";
+                    }
+                    else if (lowerTitle.Contains("sistemik") || lowerTitle.Contains("biyolojik") || lowerTitle.Contains("tedavi planlama"))
+                    {
+                        borderColor = "#7C3AED"; // Purple
+                        titleColor = "#6D28D9";
+                        bgColor = "#FAF5FF";
+                    }
+                    else if (lowerTitle.Contains("aile hekimliği") && !lowerTitle.Contains("önerilmeme"))
+                    {
+                        borderColor = "#059669"; // Emerald
+                        titleColor = "#047857";
+                        bgColor = "#F0FDF4";
+                    }
+                    else if (lowerTitle.Contains("önerilmeme") || lowerTitle.Contains("gerekçe") || lowerTitle.Contains("öncelikli değil") || lowerTitle.Contains("fototerapi") || lowerTitle.Contains("romatoloji"))
+                    {
+                        borderColor = "#64748B"; // Slate / Neutral
+                        titleColor = "#475569";
+                        bgColor = "#F8FAFC";
+                    }
+
+                    section.Item().PaddingTop(5).BorderLeft(3).BorderColor(borderColor)
+                        .Background(bgColor)
+                        .Padding(9)
+                        .Column(card =>
+                        {
+                            card.Item().Text(title).Bold().FontSize(8.5f).FontColor(titleColor);
+                            card.Item().PaddingTop(3).Text(content)
+                                .FontSize(8.5f).LineHeight(1.45f).FontColor(TextDark);
+                        });
+                }
             });
         }
     }

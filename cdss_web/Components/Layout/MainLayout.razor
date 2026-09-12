@@ -10,6 +10,10 @@
     <nav class="sidebar">
         <div class="sidebar-logo">
             <span class="logo-icon"><img src="seda-logo.jpg?v=2.1" alt="SEDA Logo" class="custom-logo" /></span>
+            <div class="logo-text">
+                <span class="logo-name">SEDA</span>
+                <span class="logo-tagline">Sedef Destek Algoritması</span>
+            </div>
         </div>
 
         <span class="nav-section-label">Menü</span>
@@ -31,7 +35,12 @@
             <span class="nav-text">Geçmiş Kararlar</span>
         </NavLink>
 
-        <a class="nav-link" @onclick="ToggleSidebar" style="margin-top:auto;">
+        <a class="nav-link" @onclick="ToggleTheme" style="cursor:pointer; margin-top:auto;" title="Temayı Değiştir">
+            <span class="nav-icon"><i class="@(_isDarkTheme ? "ph-bold ph-sun" : "ph-bold ph-moon")"></i></span>
+            <span class="nav-text">@(_isDarkTheme ? "Açık Tema" : "Karanlık Tema")</span>
+        </a>
+
+        <a class="nav-link" @onclick="ToggleSidebar">
             <span class="nav-icon"><i class="@(_isSidebarCollapsed ? "ph-bold ph-caret-right" : "ph-bold ph-caret-left")"></i></span>
             <span class="nav-text">@(_isSidebarCollapsed ? "Genişlet" : "Daralt")</span>
         </a>
@@ -93,11 +102,20 @@
     private bool _timeoutUyarisiGoster = false;
     private int _kalanSaniye = UyariSaniye;
     private bool _isSidebarCollapsed = true;
+    private bool _isDarkTheme = true;
     private int _jsHataCount = 0;  // Ard arda JS hata sayıcısı
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+
+        // ── Tema Durumu ───────────────────────────────────────────────────────
+        try
+        {
+            var theme = await JS.InvokeAsync<string>("getSavedTheme");
+            _isDarkTheme = (theme != "light");
+        }
+        catch { }
 
         // ── Auth Kontrolü ─────────────────────────────────────────────────────
         var provider = (CustomAuthStateProvider)AuthStateProvider;
@@ -147,6 +165,17 @@
         {
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            var nextTheme = await JS.InvokeAsync<string>("toggleTheme");
+            _isDarkTheme = (nextTheme != "light");
+            StateHasChanged();
+        }
+        catch { }
     }
 
     private async Task ToggleSidebar()

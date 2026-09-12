@@ -365,47 +365,62 @@ else
 }
 
 <style>
-    /* ─── Audit Modal Stilleri (Karanlık Tema Uyumlu) ──────────────────────── */
+    /* ─── Audit Modal Stilleri ────────────────────────────────────────────────── */
     .audit-modal-backdrop {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         display: flex; align-items: flex-start; justify-content: center;
         z-index: 1000;
         padding: 24px 16px;
         overflow-y: auto;
     }
 
+    [data-theme="light"] .audit-modal-backdrop {
+        background: rgba(15, 23, 42, 0.4);
+    }
+
     .audit-modal-panel {
-        background: var(--bg-secondary, #131f2e);
-        border: 1px solid var(--border, #1e2d3d);
-        border-radius: 16px;
+        background: var(--bg-card);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid var(--border);
+        border-top: 1.5px solid var(--glass-border-top);
+        border-radius: 18px;
         width: 100%;
         max-width: 760px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-        animation: modalSlideIn 0.2s ease;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        animation: modalSlideIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    [data-theme="light"] .audit-modal-panel {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-top: 1.5px solid #ffffff;
+        box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.15), 0 0 1px 1px rgba(15, 23, 42, 0.04), inset 0 1px 0 #ffffff;
     }
 
     @@keyframes modalSlideIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .audit-modal-header {
         display: flex; align-items: flex-start; justify-content: space-between;
         padding: 24px 24px 16px;
-        border-bottom: 1px solid var(--border, #1e2d3d);
+        border-bottom: 1px solid var(--border);
     }
 
     .audit-modal-footer {
         display: flex; justify-content: flex-end; gap: 12px;
         padding: 16px 24px;
-        border-top: 1px solid var(--border, #1e2d3d);
+        border-top: 1px solid var(--border);
     }
 
     .audit-section {
         padding: 20px 24px;
-        border-bottom: 1px solid var(--border, #1e2d3d);
+        border-bottom: 1px solid var(--border);
     }
 
     .audit-section:last-of-type {
@@ -414,11 +429,14 @@ else
 
     .audit-section-title {
         font-size: 13px;
-        font-weight: 600;
-        color: var(--text-muted, #5a7a9a);
+        font-weight: 700;
+        color: var(--accent);
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .audit-params-grid {
@@ -428,27 +446,36 @@ else
     }
 
     .audit-param-item {
-        background: var(--bg-primary, #0d1a27);
-        border: 1px solid var(--border, #1e2d3d);
-        border-radius: 8px;
-        padding: 10px 14px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
         display: flex; flex-direction: column; gap: 4px;
+        transition: border-color var(--transition);
+    }
+
+    [data-theme="light"] .audit-param-item {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
     }
 
     .audit-param-label {
         font-size: 11px;
-        color: var(--text-muted, #5a7a9a);
-        font-weight: 500;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
 
     .audit-param-value {
         font-size: 15px;
         font-weight: 700;
-        color: var(--text-primary, #e2e8f0);
+        color: var(--text-primary);
     }
 
-    .audit-param-value.value-warn { color: #f59e0b; }
-    .audit-param-value.value-ok   { color: #10b981; }
+    .audit-param-value.value-warn { color: var(--warning); }
+    .audit-param-value.value-ok   { color: var(--success); }
 </style>
 
 @code {

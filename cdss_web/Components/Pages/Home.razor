@@ -4,12 +4,47 @@
 
 <PageTitle>Anasayfa</PageTitle>
 
-<div class="home-hero fade-in">
-    <h2>SEDA (Sedef Destek Algoritması)</h2>
-    <p>
-        Makine öğrenmesi destekli klinik karar sistemi. Hasta verilerini girin,
-        model en uygun uzman birimini belirlesin.
-    </p>
+<div class="home-clinical-banner fade-in">
+    <div class="banner-left">
+        <div class="banner-title-wrap">
+            <h2 class="banner-title seda-animated-flow-title">SEDA</h2>
+            <span class="banner-inline-subtitle">Yapay Zekâ Destekli Karar Destek Sistemi</span>
+        </div>
+        <p class="banner-subtext">
+            Psoriasis Vulgaris Tedavi Protokolü ve Çok Disiplinli Sevk Karar Destek Sistemi
+        </p>
+    </div>
+
+    <div class="banner-axes">
+        <div class="axis-pill">
+            <i class="ph-duotone ph-pill"></i>
+            <div>
+                <strong>Sistemik Tedavi</strong>
+                <small>Biyolojik & Ajan Yönlendirmesi</small>
+            </div>
+        </div>
+        <div class="axis-pill">
+            <i class="ph-duotone ph-person-simple-walk"></i>
+            <div>
+                <strong>FTR / Artrit</strong>
+                <small>Erken Entezit Taraması</small>
+            </div>
+        </div>
+        <div class="axis-pill">
+            <i class="ph-duotone ph-heartbeat"></i>
+            <div>
+                <strong>Aile Hekimliği</strong>
+                <small>Metabolik Risk Takibi</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="banner-action">
+        <a href="/degerlendirme" class="btn btn-primary btn-banner-start">
+            <i class="ph-bold ph-microscope"></i>
+            <span>Yeni Değerlendirme</span>
+        </a>
+    </div>
 </div>
 
 <!-- ─── Sistem Durumu Kartları ─────────────────────────────────────────────── -->
@@ -54,19 +89,19 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
             <!-- Bugün -->
-            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
-                <div style="font-size:28px;font-weight:800;color:var(--accent);">@bugun</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Bugün</div>
+            <div class="home-mini-card">
+                <div class="mini-card-value" style="color:var(--accent);">@bugun</div>
+                <div class="mini-card-label">Bugün</div>
             </div>
             <!-- Bu Hafta -->
-            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
-                <div style="font-size:28px;font-weight:800;color:#818CF8;">@buHafta</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Bu Hafta</div>
+            <div class="home-mini-card">
+                <div class="mini-card-value" style="color:#818CF8;">@buHafta</div>
+                <div class="mini-card-label">Bu Hafta</div>
             </div>
             <!-- Toplam -->
-            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
-                <div style="font-size:28px;font-weight:800;color:var(--text-primary);">@_loglar.Count</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Toplam</div>
+            <div class="home-mini-card">
+                <div class="mini-card-value" style="color:var(--text-primary);">@_loglar.Count</div>
+                <div class="mini-card-label">Toplam</div>
             </div>
         </div>
 

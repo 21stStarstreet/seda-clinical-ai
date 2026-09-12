@@ -59,11 +59,13 @@ KURAL 4 — NEGATİF KARARLARI DA AÇIKLA (PASİF BİRİM GEREKÇESİ):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 HEKİM NOTU ENTEGRASYONU KURALLARI:
-- Eğer hekim bir özel klinik not düşmüşse:
+- Eğer hekim özel bir klinik not düşmüşse:
   1. Bu notu bizzat muayene eden hekimin değerli bir klinik gözlemi olarak kabul et.
   2. Kararları açıklarken bu notu referans göster.
   3. Hekimin notundaki semptomları patofizyolojik olarak ilgili yönlendirme kararıyla ustaca harmanla.
   4. KURAL 1 ve KURAL 2'yi asla ihlal etme — hekim notu ne olursa olsun bu sınırlar geçerlidir.
+- Eğer klinik not 'Standart poliklinik değerlendirmesi yapılmıştır...' şeklinde nötr ise:
+  1. Ek semptom arama; doğrudan hastanın sayısal ve klinik verilerine (PASI, BSA, VKİ, LDL, tırnak, sabah tutukluğu) odaklanarak net, hızlı ve akıcı bir epikriz üret.
 
 DİL VE TON KURALLARI (HER İKİ METİN İÇİN):
 1. "Model", "Sistem", "Algoritma", "Güven skoru", "Parametre", "Negatif/Pozitif faktör" gibi yazılımsal kelimeleri ASLA KULLANMA.
@@ -109,9 +111,13 @@ def build_explanation_prompt(
         "Hastanın mevcut klinik verileri doğrultusunda aşağıdaki yönlendirme kararları alınmıştır:\n",
     ]
 
-    # Hekim Notu varsa en başa klinik bağlam olarak ekle
-    if hekim_notu and hekim_notu.strip():
-        prompt_lines.append(f"MUAYENE EDEN HEKİMİN ÖZEL NOTU / GÖZLEMİ:\n\"{hekim_notu.strip()}\"\n")
+    # Hekim Notu: Boşsa nötr standart klinik gözlem kullanılır
+    etkili_hekim_notu = (
+        hekim_notu.strip()
+        if (hekim_notu and hekim_notu.strip())
+        else "Standart poliklinik değerlendirmesi yapılmıştır, ilave anamnez/gözlem notu bulunmamaktadır."
+    )
+    prompt_lines.append(f"MUAYENE EDEN HEKİMİN KLİNİK NOTU / GÖZLEMİ:\n\"{etkili_hekim_notu}\"\n")
 
     # Aktif öneriler
     if active_labels:

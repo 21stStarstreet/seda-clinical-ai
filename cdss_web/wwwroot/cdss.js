@@ -79,3 +79,62 @@ function animateHeightTransition(elementId, durationMs = 500) {
         el.style.height = '';
     }, durationMs);
 }
+
+// ─── Panoya Kopyalama (Clipboard Copy) ───────────────────────────────────────
+async function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } else {
+        // Fallback for non-https/older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            textArea.remove();
+            return true;
+        } catch (error) {
+            textArea.remove();
+            return false;
+        }
+    }
+}
+
+// ─── Tema Yönetimi (Light / Dark Theme) ──────────────────────────────────────
+window.getSavedTheme = function () {
+    return localStorage.getItem('seda_theme') || 'dark';
+};
+
+window.setTheme = function (theme) {
+    if (theme !== 'light' && theme !== 'dark') theme = 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    if (document.body) {
+        document.body.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('seda_theme', theme);
+    return theme;
+};
+
+window.toggleTheme = function () {
+    const current = document.documentElement.getAttribute('data-theme') || window.getSavedTheme();
+    const next = current === 'light' ? 'dark' : 'light';
+    window.setTheme(next);
+    return next;
+};
+
+// Sayfa ilk yüklendiğinde beyaz/koyu flaş patlamasını önlemek için anında uygula
+(function () {
+    try {
+        const saved = localStorage.getItem('seda_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', saved);
+        if (document.body) {
+            document.body.setAttribute('data-theme', saved);
+        }
+    } catch (e) { }
+})();
+

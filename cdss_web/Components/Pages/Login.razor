@@ -2,6 +2,7 @@
 @layout EmptyLayout
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @using Microsoft.AspNetCore.WebUtilities
 
 <PageTitle>Giriş — SEDA</PageTitle>
@@ -64,7 +65,12 @@
     </div>
 
     <div class="login-split-right">
-        <div class="login-split-version">v1.0</div>
+        <div class="login-top-actions">
+            <button type="button" class="theme-toggle-btn" @onclick="ToggleTheme" title="Temayı Değiştir">
+                <i class="@(_isDarkTheme ? "ph-bold ph-sun" : "ph-bold ph-moon")"></i>
+                <span>@(_isDarkTheme ? "Açık Tema" : "Koyu Tema")</span>
+            </button>
+        </div>
 
         <div class="login-split-form-wrap">
 
@@ -158,6 +164,7 @@
     private LoginForm _form = new();
     private string? _hataMesaji;
     private bool _yukleniyor;
+    private bool _isDarkTheme = true;
 
     [SupplyParameterFromQuery(Name = "reason")]
     private string? _reason { get; set; }
@@ -168,10 +175,30 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+
+        try
+        {
+            var theme = await JS.InvokeAsync<string>("getSavedTheme");
+            _isDarkTheme = (theme != "light");
+            StateHasChanged();
+        }
+        catch { }
+
         var provider = (CustomAuthStateProvider)AuthStateProvider;
         var state = await provider.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
             Nav.NavigateTo("/degerlendirme");
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            var nextTheme = await JS.InvokeAsync<string>("toggleTheme");
+            _isDarkTheme = (nextTheme != "light");
+            StateHasChanged();
+        }
+        catch { }
     }
 
     private async Task HandleLogin()

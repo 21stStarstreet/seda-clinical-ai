@@ -294,11 +294,11 @@
 
     @if (_patient.PasiSkoru > 20)
     {
-        <div style="background:rgba(239, 68, 68, 0.1);border-left:4px solid var(--danger);padding:16px;border-radius:4px;margin-bottom:20px;" class="fade-in">
-            <h4 style="margin:0 0 8px;color:var(--danger);font-size:15px;display:flex;align-items:center;gap:8px;">
+        <div class="urgency-alert-box fade-in">
+            <h4>
                 <span><i class="ph-fill ph-warning-circle"></i></span> ACİL DERMATOLOJİ UYARISI
             </h4>
-            <p style="margin:0;font-size:13px;color:var(--text-primary);line-height:1.5;">
+            <p>
                 Hastanın PASI skoru oldukça yüksek (&gt;20). Eritrodermik veya çok şiddetli psoriazis şüphesi olabilir. Acil tıbbi müdahale ve/veya sistemik tedaviye hızlı başlangıç gerekebilir. Lütfen hastayı önceliklendiriniz.
             </p>
         </div>
@@ -356,46 +356,116 @@
         }
     </div>
 
-    <!-- LLM Açıklama -->
+    <!-- LLM Açıklama — Modern Klinik Epikriz Paneli -->
     @if (!string.IsNullOrWhiteSpace(_result.LlmAciklamasi))
     {
         <div id="llmBoxPanel" class="llm-box fade-in">
-            <div class="llm-box-header">
-                @if (_result.LlmFallbackUsed)
-                {
-                    <strong style="color:var(--warning);display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-warning"></i> Şablon Açıklama (AI Sunucusuna Ulaşılamadı)</strong>
-                    <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Sistem Şablonu</span>
-                }
-                else
-                {
-                    <strong style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-robot"></i> Yapay Zeka Açıklaması</strong>
+            <!-- Üst Kontrol Barı: Başlık, Chip'ler, Görünüm Seçici ve Kopyalama -->
+            <div class="llm-box-header-advanced">
+                <div class="llm-header-left">
+                    <div class="llm-title-badge">
+                        <i class="ph-fill ph-sparkle"></i>
+                        <span>Klinik Karar Epikrizi</span>
+                    </div>
+                    @if (_result.LlmFallbackUsed)
+                    {
+                        <span class="llm-status-pill warning"><i class="ph-bold ph-warning"></i> Şablon Modu</span>
+                    }
+                </div>
+
+                <div class="llm-header-right">
+                    <!-- Segmented Switcher (Özet / Detaylı) -->
                     @if (!string.IsNullOrWhiteSpace(_result.LlmOzet))
                     {
-                        <button type="button" class="btn-summarize" @onclick="ToggleOzet">
-                            @if (_ozetGoster)
-                            {
-                                <i class="ph-bold ph-article" style="margin-right:5px;"></i><span>Tam Metni Göster</span>
-                            }
-                            else
-                            {
-                                <i class="ph-bold ph-lightning" style="margin-right:5px;"></i><span>Metni Özetle</span>
-                            }
-                        </button>
+                        <div class="llm-segmented-switcher">
+                            <button type="button" class="segment-btn @(_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(true)">
+                                <i class="ph-bold ph-lightning"></i>
+                                <span>Hızlı Karar</span>
+                            </button>
+                            <button type="button" class="segment-btn @(!_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(false)">
+                                <i class="ph-bold ph-article"></i>
+                                <span>Detaylı Epikriz</span>
+                            </button>
+                        </div>
                     }
+
+                    <!-- Epikrizi Kopyala Butonu -->
+                    <button type="button" class="btn-copy-epicrisis" @onclick="CopyEpikrizToClipboard" title="Epikrizi panoya kopyala">
+                        @if (_epikrizKopyalandi)
+                        {
+                            <i class="ph-bold ph-check" style="color:#10b981;"></i>
+                            <span style="color:#10b981;">Kopyalandı!</span>
+                        }
+                        else
+                        {
+                            <i class="ph-bold ph-copy"></i>
+                            <span>Epikrizi Kopyala</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Klinik İpucu & Dayanak Chip'leri (Kritik Bulgular) -->
+            <div class="llm-clinical-chips">
+                <span class="chips-label">Dayanak Bulgular:</span>
+                @if (_patient.PasiSkoru.HasValue && _patient.PasiSkoru.Value > 10)
+                {
+                    <span class="clinical-chip danger"><i class="ph-bold ph-chart-line-up"></i> PASI: @_patient.PasiSkoru.Value.ToString("F1") (Şiddetli)</span>
+                }
+                @if (_patient.Bsa.HasValue && _patient.Bsa > 10)
+                {
+                    <span class="clinical-chip danger"><i class="ph-bold ph-percent"></i> BSA: %@_patient.Bsa</span>
+                }
+                @if (_patient.SabahTuruklugu30dk)
+                {
+                    <span class="clinical-chip warning"><i class="ph-bold ph-clock"></i> Sabah Tutukluğu &gt;30dk</span>
+                }
+                @if (_patient.TirnakTutulumu)
+                {
+                    <span class="clinical-chip warning"><i class="ph-bold ph-hand"></i> Tırnak Tutulumu</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(_patient.HekimNotu))
+                {
+                    <span class="clinical-chip info" title="@_patient.HekimNotu"><i class="ph-bold ph-notepad"></i> Hekim Notu Dahil Edildi</span>
+                }
+                @if (_patient.Ldl.HasValue && _patient.Ldl.Value >= 160)
+                {
+                    <span class="clinical-chip info"><i class="ph-bold ph-heartbeat"></i> Yüksek LDL (@_patient.Ldl.Value)</span>
                 }
             </div>
+
+            <!-- Epikriz İçeriği (Kartlar veya Özet) -->
             <div class="llm-body-wrapper @(_ozetGoster ? "is-summary" : "is-detail")">
                 <div class="llm-body-inner">
                     @if (_ozetGoster && !string.IsNullOrWhiteSpace(_result.LlmOzet))
                     {
-                        <div class="llm-text summary-text fade-scale-in">
-                            @_result.LlmOzet
+                        <div class="llm-quick-summary-card fade-scale-in">
+                            <div class="summary-card-header">
+                                <i class="ph-fill ph-lightning"></i>
+                                <span>Aksiyona Yönelik Klinik Özet</span>
+                            </div>
+                            <div class="summary-card-body">
+                                @_result.LlmOzet
+                            </div>
                         </div>
                     }
                     else
                     {
-                        <div class="llm-text detail-text fade-scale-in">
-                            @_result.LlmAciklamasi
+                        <div class="llm-cards-stream fade-scale-in">
+                            @foreach (var card in ParseEpikrizCards(_result.LlmAciklamasi))
+                            {
+                                <div class="clinical-decision-card @card.CssClass">
+                                    <div class="decision-card-header">
+                                        <div class="decision-header-title">
+                                            <span class="decision-icon"><i class="@card.IconClass"></i></span>
+                                            <h4>@card.Title</h4>
+                                        </div>
+                                    </div>
+                                    <div class="decision-card-body">
+                                        @card.Content
+                                    </div>
+                                </div>
+                            }
                         </div>
                     }
                 </div>
@@ -436,12 +506,117 @@
     // --- Accordion State ---
     private bool _kimlikAcik = false;
     private bool _ozetGoster = false;
+    private bool _epikrizKopyalandi = false;
 
-    private async Task ToggleOzet()
+    private async Task SetOzetGoster(bool ozet)
     {
-        _ozetGoster = !_ozetGoster;
+        if (_ozetGoster == ozet) return;
+        _ozetGoster = ozet;
         StateHasChanged();
-        await JS.InvokeVoidAsync("animateHeightTransition", "llmBoxPanel", 450);
+        await JS.InvokeVoidAsync("animateHeightTransition", "llmBoxPanel", 350);
+    }
+
+    private async Task CopyEpikrizToClipboard()
+    {
+        var textToCopy = _ozetGoster && !string.IsNullOrWhiteSpace(_result?.LlmOzet)
+            ? _result.LlmOzet
+            : _result?.LlmAciklamasi ?? "";
+
+        if (string.IsNullOrWhiteSpace(textToCopy)) return;
+
+        var success = await JS.InvokeAsync<bool>("copyToClipboard", textToCopy);
+        if (success)
+        {
+            _epikrizKopyalandi = true;
+            StateHasChanged();
+            await Task.Delay(2500);
+            _epikrizKopyalandi = false;
+            StateHasChanged();
+        }
+    }
+
+    private record EpikrizCard(string Title, string Content, string CssClass, string BadgeText, string BadgeCssClass, string IconClass);
+
+    private List<EpikrizCard> ParseEpikrizCards(string rawText)
+    {
+        var list = new List<EpikrizCard>();
+        if (string.IsNullOrWhiteSpace(rawText)) return list;
+
+        // Metin çift satır sonu ile paragraflara ayrılır
+        var paragraphs = rawText.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var para in paragraphs)
+        {
+            var trimmed = para.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+            string title = "Klinik Değerlendirme";
+            string content = trimmed;
+            string cssClass = "card-general";
+            string badgeText = "GEREKÇELİ NOT";
+            string badgeCssClass = "badge-general";
+            string iconClass = "ph-bold ph-notepad";
+
+            // Eğer **Başlık:** formatında ise başlığı ayıkla
+            if (trimmed.StartsWith("**") && trimmed.Contains("**"))
+            {
+                var firstEnd = trimmed.IndexOf("**", 2);
+                if (firstEnd > 2)
+                {
+                    title = trimmed.Substring(2, firstEnd - 2).Trim().TrimEnd(':');
+                    content = trimmed.Substring(firstEnd + 2).Trim().TrimStart(':').Trim();
+                }
+            }
+
+            var lowerTitle = title.ToLowerInvariant();
+
+            if (lowerTitle.Contains("fizik tedavi") || lowerTitle.Contains("ftr") || lowerTitle.Contains("romatoloji") || lowerTitle.Contains("artrit"))
+            {
+                cssClass = "card-ftr";
+                badgeText = "FTR KONSÜLTASYONU";
+                badgeCssClass = "badge-ftr";
+                iconClass = "ph-bold ph-person-simple-walk";
+            }
+            else if (lowerTitle.Contains("sistemik") || lowerTitle.Contains("biyolojik") || lowerTitle.Contains("tedavi planlama"))
+            {
+                cssClass = "card-systemic";
+                badgeText = "SİSTEMİK TEDAVİ";
+                badgeCssClass = "badge-systemic";
+                iconClass = "ph-bold ph-pill";
+            }
+            else if (lowerTitle.Contains("aile hekimliği") || lowerTitle.Contains("birincil basamak"))
+            {
+                cssClass = "card-primary";
+                badgeText = "AİLE HEKİMLİĞİ";
+                badgeCssClass = "badge-primary-care";
+                iconClass = "ph-bold ph-first-aid-kit";
+            }
+            else if (lowerTitle.Contains("önerilmemesi") || lowerTitle.Contains("gerekçe") || lowerTitle.Contains("öncelikli değil"))
+            {
+                cssClass = "card-passive";
+                badgeText = "PASİF / GEREKÇE";
+                badgeCssClass = "badge-passive";
+                iconClass = "ph-bold ph-shield-check";
+            }
+
+            // Başlık "Önerilmemesi" içeriyorsa pasif stilini önceliklendir
+            if (lowerTitle.Contains("önerilmemesi") || lowerTitle.Contains("gerekçesi") || lowerTitle.Contains("öncelikli görülmeme"))
+            {
+                cssClass = "card-passive";
+                badgeText = "ÖNERİLMEME GEREKÇESİ";
+                badgeCssClass = "badge-passive";
+            }
+
+            list.Add(new EpikrizCard(title, content, cssClass, badgeText, badgeCssClass, iconClass));
+        }
+
+        // Eğer hiç başlık bulunamadıysa tek kart yap
+        if (!list.Any() && !string.IsNullOrWhiteSpace(rawText))
+        {
+            list.Add(new EpikrizCard("Klinik Karar Notu", rawText, "card-general", "EPİKRİZ", "badge-general", "ph-bold ph-notepad"));
+        }
+
+        return list;
     }
 
     // --- İsteğe Bağlı Kimlik State ---

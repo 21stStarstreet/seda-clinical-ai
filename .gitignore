@@ -22,11 +22,13 @@ env/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Veri dosyaları — Gerçek hasta verisi asla git'e girmez!
-data/raw/
-data/processed/
+# Veri dosyaları — Gerçek hasta verisi ve ham veri setleri asla git'e girmez!
+data/
+datasets/
 *.csv
 *.xlsx
+*.xls
+*.docx
 *.parquet
 
 # Model artifact'ları (büyük dosyalar)

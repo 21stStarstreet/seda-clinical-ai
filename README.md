@@ -1,3 +1,33 @@
+# 🩺 SEDA (Sedef Destek Algoritması)
+### Psoriasis Vulgaris Tedavi Protokolü & Çok Disiplinli Sevk Karar Destek Sistemi
+
+<p align="center">
+  <!-- Diller & Framework'ler -->
+  <img src="https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-REST_API-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/C%23-12.0-239120?style=flat&logo=c-sharp&logoColor=white" alt="C#" />
+  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=flat&logo=dotnet&logoColor=white" alt="Dotnet" />
+  <img src="https://img.shields.io/badge/Blazor-Interactive_Server-512BD4?style=flat&logo=blazor&logoColor=white" alt="Blazor" />
+</p>
+
+<p align="center">
+  <!-- Yapay Zekâ & Makine Öğrenmesi -->
+  <img src="https://img.shields.io/badge/XGBoost-Binary_Relevance-EB5424?style=flat" alt="XGBoost" />
+  <img src="https://img.shields.io/badge/SHAP-TreeExplainer-FF6F00?style=flat" alt="SHAP" />
+  <img src="https://img.shields.io/badge/Google_Gemini-1.5_Flash-8E75C2?style=flat&logo=google-gemini&logoColor=white" alt="Gemini" />
+  <img src="https://img.shields.io/badge/Scikit_Learn-Pipeline-F7931E?style=flat&logo=scikit-learn&logoColor=white" alt="Scikit-Learn" />
+</p>
+
+<p align="center">
+  <!-- Güvenlik, Veri & UI -->
+  <img src="https://img.shields.io/badge/JWT-OAuth2_Bearer-black?style=flat&logo=json-web-tokens&logoColor=white" alt="JWT" />
+  <img src="https://img.shields.io/badge/BCrypt-Password_Hash-4A154B?style=flat" alt="BCrypt" />
+  <img src="https://img.shields.io/badge/Cryptography-AES--128_Fernet-00599C?style=flat" alt="Fernet" />
+  <img src="https://img.shields.io/badge/SQLite-Encrypted_Audit-003B57?style=flat&logo=sqlite&logoColor=white" alt="SQLite" />
+</p>
+
+---
+
 # Faz 1 — Adım Adım Uygulama Kaydı
 
 > **Tarih**: 29 Temmuz 2026  

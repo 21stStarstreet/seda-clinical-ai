@@ -1703,22 +1703,31 @@ select.form-input {
     pointer-events: none;
 }
 
+@keyframes btnMorphRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 .btn-morph-spinner {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 2.5px solid rgba(255, 255, 255, 0.25);
     border-top-color: #ffffff;
     border-radius: 50%;
-    animation: spin 0.75s linear infinite;
     opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.3s ease 0.1s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;
+    pointer-events: none;
+    box-sizing: border-box;
+    transition: opacity 0.2s ease;
 }
 
 .btn-morph-submit.is-loading .btn-morph-spinner {
     opacity: 1;
-    transform: scale(1);
+    animation: btnMorphRotate 0.75s linear infinite !important;
 }
 
 .btn-ghost {

@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/cdss_web.props" />
-</Project>

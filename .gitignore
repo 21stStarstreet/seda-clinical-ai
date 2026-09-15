@@ -56,3 +56,11 @@ Thumbs.db
 # Raporlar
 reports/*.png
 reports/*.html
+
+# Klinik kılavuz PDF'leri — telif hakkı korumalı, repo'ya girmez
+docs/guidelines/
+*.pdf
+
+# .NET build artifact'ları — repo'ya girmez
+cdss_web/bin/
+cdss_web/obj/

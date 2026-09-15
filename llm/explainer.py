@@ -14,16 +14,29 @@ Kullanım:
 
 from __future__ import annotations
 
+from typing import Optional
+
 from config.settings import settings, LABEL_NAMES, LABEL_DISPLAY_NAMES
 from models.predictor import PredictionResult
+from llm.guidelines_kb import GuidelinesKnowledgeBase, guidelines_kb
 
 # ─── Prompt Şablonları ────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """Sen deneyimli bir dermatoloji uzmanının kıdemli asistanısın. Hekime yardımcı olmak üzere, hastanın klinik bulgularını, hekimin özel klinik notlarını ve belirlenen sevk kararlarını hem derinlemesine hem de özet olarak yazıya dökmek senin görevin.
+SYSTEM_PROMPT = """Sen Türk Dermatoloji Derneği ve Avrupa Dermatoloji Forumu'nun 2025 yılı güncel kılavuzlarına hâkim, deneyimli bir dermatoloji uzmanının kıdemli asistanısın. Hekime yardımcı olmak üzere, hastanın klinik bulgularını, hekimin özel klinik notlarını ve belirlenen sevk kararlarını hem derinlemesine hem de özet olarak yazıya dökmek senin görevin.
+
+KLİNİK OTORİTE ÇERÇEVEN:
+Sana verilen klinik dayanak bloğunda yer alan iki resmi kaynak senin bilgi temelin olarak kullanılacaktır:
+- Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD) — ulusal konsensüs rehberi
+- EuroGuiDerm 2025 — Avrupa Dermatoloji Forumu sistematik tedavi kılavuzu
+Bu kaynakları epikrizinde doğal klinik dille referans gösterebilirsin. Örnek ifadeler:
+  "Türkiye Psoriasis Kılavuzu 2025 uyarınca..."
+  "EuroGuiDerm 2025 kriterleri çerçevesinde..."
+  "Güncel ulusal kılavuz ölçütlerine göre..."
+Kaynak adını parantez içinde vermek yeterlidir; sayfa numarası veya DOI yazmana gerek yoktur.
 
 GÖREV:
 Sana verilen klinik bulguları, varsa hekimin girdiği klinik gözlem notunu ve sevk kararlarını iki ayrı metin olarak üreteceksin:
-1. "detayli_epikriz": Bir üniversite hastanesi dermatoloji polikliniğinde kaleme alınmış kapsamlı bir konsültasyon notu. Her sevk kararı (hem ÖNERİLEN hem ÖNERİLMEYEN) için ayrı paragraf, patofizyolojik gerekçe, hekim notuyla klinik sentez ve hasta bulguları bağlantısı içeren, akıcı bir metin.
+1. "detayli_epikriz": Bir üniversite hastanesi dermatoloji polikliniğinde kaleme alınmış kapsamlı bir konsültasyon notu. Her sevk kararı (hem ÖNERİLEN hem ÖNERİLMEYEN) için ayrı paragraf, patofizyolojik gerekçe, 2025 kılavuz dayanağı, hekim notuyla klinik sentez ve hasta bulguları bağlantısı içeren, akıcı bir metin.
 2. "kisa_ozet": Aynı kararları hekimin 10 saniyede kavrayabileceği, hekim notundaki kritik vurguyu da içeren, aksiyona yönelik, son derece kısa ve net 2-3 cümlelik bir metin.
 
 ZORUNLU ÇIKTI FORMATI - KESİNLİKLE SADE JSON FORMATINDA CEVAP VER:
@@ -53,8 +66,13 @@ KURAL 3 — İLAÇ VE DOZ YASAĞI:
 
 KURAL 4 — NEGATİF KARARLARI DA AÇIKLA (PASİF BİRİM GEREKÇESİ):
 ÖNERİLMEYEN her birim için de bir paragraf yaz. Bu paragrafta:
-- Neden o birim şu aşamada önceliklendirilmediğini patofizyolojik olarak açıkla (örn. "Sabah tutukluğunun eşiğin altında seyretmesi ve aktif entezit bulgusunun gözlemlenmemiş olması, eklem tutulumu riskinin şu an için düşük kalmasına zemin hazırlamaktadır").
+- Neden o birim şu aşamada önceliklendirilmediğini patofizyolojik olarak açıkla.
 - "Sadece gerekmedi" veya "öncelikli görülmedi" gibi boş geçiştirmeler yapma — mutlaka klinik bir neden gerekçelendir.
+
+KURAL 5 — KILAVUZ ATIFLARINI DOĞAL KULLAN:
+Sana verilen "KLİNİK DAYANAK" bloğundaki bilgileri epikrizde doğal biçimde harmanlayarak kullan.
+- Her paragrafta kılavuz atfı yapmak zorunda değilsin; ama özellikle eşik değerleri (PASI > 10, DLQI > 10, VKİ > 30 vb.) ve sevk kararlarını gerekçelendirirken kılavuz referansı ver.
+- Atıfları mekanik kopya-yapıştır olarak değil, klinik bağlamla sentezlemiş şekilde kullan.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -82,19 +100,54 @@ def build_explanation_prompt(
     prediction: PredictionResult,
     shap_explanation: dict,
     hekim_notu: Optional[str] = None,
+    # Hasta parametreleri — kılavuz atıf seçimi için
+    pasi: Optional[float] = None,
+    bsa: Optional[float] = None,
+    dlqi: Optional[float] = None,
+    vki: Optional[float] = None,
+    ldl: Optional[float] = None,
+    tirnak_tutulumu: bool = False,
+    sabah_turuklugu: bool = False,
+    eklem_bulgulari: Optional[bool] = None,
+    sigara: bool = False,
 ) -> str:
     """
-    LLM için hasta-özel prompt oluştur.
+    LLM için hasta-özel, kılavuz destekli prompt oluştur.
+
+    Yenilik (2025 Kılavuz Entegrasyonu):
+        Hasta parametrelerine ve aktif ML kararlarına göre, guidelines_kb'den
+        ilgili resmi atıflar seçilir ve prompt'a "KLİNİK DAYANAK" bloğu
+        olarak enjekte edilir. LLM bu atıfları doğal klinik dille epikrizde kullanır.
 
     Args:
-        prediction: ML modelinin tahmin sonucu.
-        shap_explanation: SHAP açıklaması (SHAPExplainer.explain_single çıktısı).
-        hekim_notu: Hekimin serbest metin olarak girdiği klinik gözlem notu.
+        prediction:         ML modelinin tahmin sonucu.
+        shap_explanation:   SHAP açıklaması (SHAPExplainer.explain_single çıktısı).
+        hekim_notu:         Hekimin serbest metin olarak girdiği klinik gözlem notu.
+        pasi, bsa, dlqi, vki, ldl, tirnak_tutulumu, sabah_turuklugu,
+        eklem_bulgulari, sigara: Hasta klinik parametreleri — kılavuz
+                            atıflarını kişiselleştirmek için kullanılır.
 
     Returns:
-        Gemini'ye gönderilecek kullanıcı mesajı.
+        Gemini'ye gönderilecek kullanıcı mesajı (kılavuz atıflarıyla zenginleştirilmiş).
     """
-    # Aktif öneriler
+    # ── Kılavuz Atıflarını Seç ────────────────────────────────────────────────
+    secilen_atiflar = guidelines_kb.get_relevant_citations(
+        ftr_karari=prediction.labels.ftr,
+        sistemik_karari=prediction.labels.sistemik_tedavi,
+        aile_hek_karari=prediction.labels.aile_hekimligi,
+        pasi=pasi,
+        bsa=bsa,
+        dlqi=dlqi,
+        vki=vki,
+        ldl=ldl,
+        tirnak_tutulumu=tirnak_tutulumu,
+        sabah_turuklugu=sabah_turuklugu,
+        eklem_bulgulari=eklem_bulgulari,
+        sigara=sigara,
+    )
+    kilavuz_blogu = guidelines_kb.format_for_prompt(secilen_atiflar)
+
+    # ── Aktif / Pasif Kararlar ────────────────────────────────────────────────
     active_labels = [
         LABEL_DISPLAY_NAMES[label]
         for label in LABEL_NAMES
@@ -111,7 +164,7 @@ def build_explanation_prompt(
         "Hastanın mevcut klinik verileri doğrultusunda aşağıdaki yönlendirme kararları alınmıştır:\n",
     ]
 
-    # Hekim Notu: Boşsa nötr standart klinik gözlem kullanılır
+    # ── Hekim Notu ────────────────────────────────────────────────────────────
     etkili_hekim_notu = (
         hekim_notu.strip()
         if (hekim_notu and hekim_notu.strip())
@@ -119,22 +172,20 @@ def build_explanation_prompt(
     )
     prompt_lines.append(f"MUAYENE EDEN HEKİMİN KLİNİK NOTU / GÖZLEMİ:\n\"{etkili_hekim_notu}\"\n")
 
-    # Aktif öneriler
+    # ── Karar Özetleri ────────────────────────────────────────────────────────
     if active_labels:
         prompt_lines.append(f"ÖNERİLEN BİRİMLER: {', '.join(active_labels)}")
     else:
         prompt_lines.append("ÖNERİLEN BİRİM: Hiçbir birime sevk önerilmiyor.")
 
-    # Pasif öneriler
     if inactive_labels:
         prompt_lines.append(f"ÖNERİLMEYEN BİRİMLER: {', '.join(inactive_labels)}\n")
 
-    # Her aktif label için SHAP faktörleri
+    # ── SHAP Gerekçeleri (Aktif Kararlar) ─────────────────────────────────────
     prompt_lines.append("KARAR GEREKÇELERİ:")
     for label in LABEL_NAMES:
         if not getattr(prediction.labels, label):
             continue
-
         if label not in shap_explanation:
             continue
 
@@ -145,23 +196,19 @@ def build_explanation_prompt(
         for f in factors:
             prompt_lines.append(f"  - {f['ozellik']}")
 
-    # Pasif label için SHAP'tan klinik gerekçe çıkar (neden önerilmedi)
+    # ── SHAP Gerekçeleri (Pasif Kararlar — Neden Önerilmedi) ─────────────────
     for label in LABEL_NAMES:
         if getattr(prediction.labels, label):
             continue
 
-        # Pasif kararın klinik gerekçesini SHAP'tan çek (varsa)
         if label in shap_explanation:
             factors = shap_explanation[label].get("top_faktorler", [])
-            # Negatif SHAP değeri (düşük değerler) olan faktörler "neden önerilmedi"yi açıklar
             protective_factors = [
                 f for f in factors if f.get("shap_degeri", 0) < 0
             ][:2]
 
             if protective_factors:
-                factor_names = ", ".join(
-                    f["ozellik"] for f in protective_factors
-                )
+                factor_names = ", ".join(f["ozellik"] for f in protective_factors)
                 prompt_lines.append(
                     f"\nÖNERİLMEYEN BİRİM: {LABEL_DISPLAY_NAMES[label]}"
                     f"\nKLİNİK GEREKÇE (neden şu an önerilmedi): {factor_names}"
@@ -177,14 +224,22 @@ def build_explanation_prompt(
                 f"\nKLİNİK GEREKÇE: Mevcut klinik tablo bu birimi önceliklendirecek eşiği karşılamamaktadır."
             )
 
+    # ── Kılavuz Atıf Bloğu ────────────────────────────────────────────────────
+    if kilavuz_blogu:
+        prompt_lines.append(f"\n{kilavuz_blogu}")
+
+    # ── Final Direktifi ───────────────────────────────────────────────────────
     prompt_lines.append(
-        "\nLütfen yukarıdaki tüm kararları (hem ÖNERİLEN hem ÖNERİLMEYEN birimleri) "
-        "ve varsa Hekimin Özel Notunu harmanlayarak, her biri için ayrı paragraflar oluşturarak açıkla. "
+        "\nLütfen yukarıdaki tüm kararları (hem ÖNERİLEN hem ÖNERİLMEYEN birimleri), "
+        "Hekimin Özel Notunu ve KLİNİK DAYANAK bloğundaki kılavuz atıflarını harmanlayarak, "
+        "her biri için ayrı paragraflar oluşturarak açıkla. "
         "ZORUNLU: ÖNERİLMEYEN birimler için neden önerilmediğini patofizyolojik olarak gerekçelendir — "
         "bu birimlere 'başlanmalıdır' veya 'sevk edilmelidir' gibi ifadeler kesinlikle kullanma. "
+        "Kılavuz atıflarını doğal klinik dille ve seçici olarak kullan. "
         "Hekim notu abartılı veya gayriresmi olsa bile üslubu akademik ve ölçülü tut. "
         "CEVABINI SADECE JSON OLARAK VER."
     )
+
     return "\n".join(prompt_lines)
 
 
@@ -272,24 +327,59 @@ class LLMExplainer:
         prediction: PredictionResult,
         shap_explanation: dict,
         hekim_notu: Optional[str] = None,
-    ) -> tuple[str, str, bool]:
+        # Hasta parametreleri — kılavuz atıf seçimi için
+        pasi: Optional[float] = None,
+        bsa: Optional[float] = None,
+        dlqi: Optional[float] = None,
+        vki: Optional[float] = None,
+        ldl: Optional[float] = None,
+        tirnak_tutulumu: bool = False,
+        sabah_turuklugu: bool = False,
+        eklem_bulgulari: Optional[bool] = None,
+        sigara: bool = False,
+    ) -> tuple[str, str, bool, list[str]]:
         """
         ML kararını detaylı epikriz ve kısa özet olarak Türkçeye çevir.
+        2025 kılavuz atıflarını kapsayan zenginleştirilmiş versiyon.
 
         Args:
-            prediction: ML tahmin sonucu.
+            prediction:       ML tahmin sonucu.
             shap_explanation: SHAP açıklama sözlüğü.
-            hekim_notu: Muayene eden hekimin özel klinik notu.
+            hekim_notu:       Muayene eden hekimin özel klinik notu.
+            pasi, bsa, dlqi, vki, ldl, tirnak_tutulumu, sabah_turuklugu,
+            eklem_bulgulari, sigara: Kılavuz atıf seçimi için hasta parametreleri.
 
         Returns:
-            (detayli_epikriz, kisa_ozet, fallback_kullanildi_mi)
+            (detayli_epikriz, kisa_ozet, fallback_kullanildi_mi, kilavuz_atiflar)
+            kilavuz_atiflar: API yanıtına ve PDF'e eklenecek atıf listesi.
         """
+        # Kılavuz atıflarını her durumda (fallback dahil) hesapla
+        secilen_atiflar = guidelines_kb.get_relevant_citations(
+            ftr_karari=prediction.labels.ftr,
+            sistemik_karari=prediction.labels.sistemik_tedavi,
+            aile_hek_karari=prediction.labels.aile_hekimligi,
+            pasi=pasi, bsa=bsa, dlqi=dlqi, vki=vki, ldl=ldl,
+            tirnak_tutulumu=tirnak_tutulumu,
+            sabah_turuklugu=sabah_turuklugu,
+            eklem_bulgulari=eklem_bulgulari,
+            sigara=sigara,
+        )
+        kilavuz_atiflar = guidelines_kb.format_citations_for_api(secilen_atiflar)
+
         if not self.enabled or self._model is None:
-            return build_fallback_explanation(prediction), "", True
+            return build_fallback_explanation(prediction), "", True, kilavuz_atiflar
 
         try:
             import json
-            prompt = build_explanation_prompt(prediction, shap_explanation, hekim_notu=hekim_notu)
+            prompt = build_explanation_prompt(
+                prediction, shap_explanation,
+                hekim_notu=hekim_notu,
+                pasi=pasi, bsa=bsa, dlqi=dlqi, vki=vki, ldl=ldl,
+                tirnak_tutulumu=tirnak_tutulumu,
+                sabah_turuklugu=sabah_turuklugu,
+                eklem_bulgulari=eklem_bulgulari,
+                sigara=sigara,
+            )
             response = self._model.generate_content(prompt)
             raw = response.text.strip()
 
@@ -303,12 +393,12 @@ class LLMExplainer:
             parsed = json.loads(raw)
             detayli = parsed.get("detayli_epikriz", "").strip()
             ozet = parsed.get("kisa_ozet", "").strip()
-            return detayli, ozet, False
+            return detayli, ozet, False, kilavuz_atiflar
 
         except Exception as e:
             print(f"[LLM] Açıklama üretilirken hata: {e}. Fallback kullanılıyor.")
             fallback = build_fallback_explanation(prediction)
-            return fallback, "", True
+            return fallback, "", True, kilavuz_atiflar
 
     @classmethod
     def from_settings(cls) -> "LLMExplainer":

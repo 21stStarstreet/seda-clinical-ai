@@ -192,6 +192,14 @@ class PredictionResponse(BaseModel):
     model_versiyonu: str
     islem_suresi_ms: float
     audit_id: int
+    kilavuz_atiflar: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Aktif kararlara göre seçilmiş resmi kılavuz atıfları. "
+            "Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD) ve "
+            "EuroGuiDerm 2025 kaynaklarına dayalı."
+        ),
+    )
 
 
 class HealthResponse(BaseModel):
@@ -275,9 +283,21 @@ async def predict(
     X = predictor.pipeline.transform_single(feature_obj)
     shap_explanation = shap_explainer.explain_single(X, top_n=5)
 
-    # 3. LLM Açıklaması
-    llm_detayli, llm_ozet, is_fallback = llm_explainer.explain(
-        prediction, shap_explanation, hekim_notu=patient_input.hekim_notu
+    # 3. LLM Açıklaması (2025 Kılavuz Atıflı)
+    llm_detayli, llm_ozet, is_fallback, kilavuz_atiflar = llm_explainer.explain(
+        prediction,
+        shap_explanation,
+        hekim_notu=patient_input.hekim_notu,
+        # Hasta parametrelerini ilet — kılavuz atıf seçimi için
+        pasi=patient_input.pasi_skoru,
+        bsa=patient_input.bsa,
+        dlqi=patient_input.dlqi,
+        vki=patient_input.vki,
+        ldl=patient_input.ldl,
+        tirnak_tutulumu=patient_input.tirnak_tutulumu,
+        sabah_turuklugu=patient_input.sabah_turuklugu_30dk,
+        eklem_bulgulari=patient_input.eklem_bulgulari,
+        sigara=patient_input.sigara,
     )
 
     elapsed_ms = (time.time() - start_time) * 1000
@@ -317,6 +337,7 @@ async def predict(
         model_versiyonu=prediction.model_version,
         islem_suresi_ms=round(elapsed_ms, 2),
         audit_id=audit_id,
+        kilavuz_atiflar=kilavuz_atiflar,
     )
 
 

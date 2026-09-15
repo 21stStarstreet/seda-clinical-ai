@@ -33,7 +33,8 @@ public record PredictionResponse(
     [property: JsonPropertyName("llm_fallback_used")] bool LlmFallbackUsed,
     [property: JsonPropertyName("model_versiyonu")]   string? ModelVersiyonu,
     [property: JsonPropertyName("islem_suresi_ms")]   double? IslemSuresiMs,
-    [property: JsonPropertyName("audit_id")]          int AuditId
+    [property: JsonPropertyName("audit_id")]          int AuditId,
+    [property: JsonPropertyName("kilavuz_atiflar")]   List<string>? KilavuzAtiflar
 );
 
 // ─── /health yanıtı ───────────────────────────────────────────────────────────

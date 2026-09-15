@@ -46,6 +46,7 @@ public class PdfReportService
                     BuildInputParameters(col, patient);
                     // BuildDecisions(col, result); // Kullanıcı isteği üzerine gizlendi
                     BuildShapAndExplanation(col, result);
+                    BuildReferences(col, result);
                     BuildDisclaimer(col);
                 });
                 page.Footer().Element(BuildFooter);
@@ -475,6 +476,77 @@ public class PdfReportService
                 }
             });
         }
+    }
+
+    // ── KLİNİK DAYANAK VE REFERANSLAR ────────────────────────────────────────
+    private static readonly string AccentTeal = "#0D9488";
+    private static readonly string BgTeal      = "#F0FDFA";
+
+    private void BuildReferences(ColumnDescriptor col, PredictionResponse result)
+    {
+        // Kılavuz atıfları boşsa bu bölümü hiç render etme
+        if (result.KilavuzAtiflar is null || result.KilavuzAtiflar.Count == 0)
+            return;
+
+        col.Item().Column(section =>
+        {
+            SectionLabel(section, "Klinik Dayanak ve Referanslar");
+
+            section.Item()
+                .BorderLeft(3).BorderColor(AccentTeal)
+                .Background(BgTeal)
+                .Padding(10)
+                .Column(inner =>
+                {
+                    inner.Item().PaddingBottom(5)
+                        .Text("Bu rapordaki klinik sevk kararları aşağıdaki güncel kılavuzlarla uyumludur:")
+                        .FontSize(8).FontColor(TextMid).Italic();
+
+                    // Benzersiz kaynakları belirle
+                    bool hasTR2025 = result.KilavuzAtiflar.Any(a => a.StartsWith("TR2025"));
+                    bool hasEG2025 = result.KilavuzAtiflar.Any(a => a.StartsWith("EG2025"));
+
+                    if (hasTR2025)
+                    {
+                        inner.Item().PaddingTop(4).Row(row =>
+                        {
+                            row.ConstantItem(14).PaddingTop(1)
+                                .Text("[1]").FontSize(7.5f).FontColor(AccentTeal).Bold();
+                            row.RelativeItem()
+                                .Text("Türk Dermatoloji Derneği Psoriasis Çalışma Grubu (PSOKİD). " +
+                                      "Türkiye Psoriasis Tedavi Kılavuzu 2025. " +
+                                      "www.psokid.org, Ekim 2025.")
+                                .FontSize(8).FontColor(TextDark).LineHeight(1.4f);
+                        });
+                    }
+
+                    if (hasEG2025)
+                    {
+                        inner.Item().PaddingTop(4).Row(row =>
+                        {
+                            row.ConstantItem(14).PaddingTop(1)
+                                .Text("[2]").FontSize(7.5f).FontColor(AccentTeal).Bold();
+                            row.RelativeItem()
+                                .Text("Nast A, Spuls PI, et al. EuroGuiDerm Guideline for the Systemic " +
+                                      "Treatment of Psoriasis Vulgaris. " +
+                                      "European Dermatology Forum (EDF), Eylül 2023 — Güncelleme Şubat 2025. " +
+                                      "DOI: 10.1111/jdv.16752.")
+                                .FontSize(8).FontColor(TextDark).LineHeight(1.4f);
+                        });
+                    }
+
+                    // Kullanılan bölümler (atıf detayları — küçük font)
+                    inner.Item().PaddingTop(8)
+                        .Text("Kullanılan Bölümler:")
+                        .FontSize(7.5f).FontColor(TextLight).Bold();
+
+                    foreach (var atif in result.KilavuzAtiflar)
+                    {
+                        inner.Item().PaddingTop(2).Text($"• {atif}")
+                            .FontSize(7.5f).FontColor(TextMid).LineHeight(1.3f);
+                    }
+                });
+        });
     }
 
     // ── YASAL UYARI ───────────────────────────────────────────────────────────

@@ -69,4 +69,4 @@ cdss_web/bin/
 cdss_web/obj/
 
 #agents
-.agents
+.agents/

@@ -1,0 +1,466 @@
+@page "/kilavuz-danisan"
+@layout MainLayout
+@inject CdssApiService ApiService
+@inject IJSRuntime JS
+@using cdss_web.Models
+@using System.Text.RegularExpressions
+
+<PageTitle>Kılavuz Danışmanı — SEDA</PageTitle>
+
+<div class="rag-workspace fade-in">
+
+    <!-- ── ÜST BAR / HEADER ───────────────────────────────────────────── -->
+    <header class="rag-topbar">
+        <div class="rag-topbar-info">
+            <div class="rag-badge-icon">
+                <i class="ph-duotone ph-books"></i>
+            </div>
+            <div>
+                <div class="rag-title-row">
+                    <h1 class="rag-main-title">Klinik Kılavuz Danışmanı</h1>
+                </div>
+                <p class="rag-meta-sub">
+                    Türkiye Psoriasis Tedavi Kılavuzu 2025 (PSOKİD) &nbsp;·&nbsp; EuroGuiDerm 2025 &nbsp;·&nbsp; 1.100+ taranmış bölüm
+                </p>
+            </div>
+        </div>
+
+        <!-- Kaynak Filtreleri -->
+        <div class="rag-filter-group">
+            <span class="rag-filter-label"><i class="ph ph-funnel"></i> Kılavuz:</span>
+            <button class="rag-pill-btn @(_kaynakFiltre == null ? "active" : "")"
+                    @onclick="() => SetKaynakFiltre(null)">
+                Tümü
+            </button>
+            <button class="rag-pill-btn @(_kaynakFiltre?.Contains("TR2025") == true ? "active" : "")"
+                    @onclick='() => SetKaynakFiltre(new List<string>{"TR2025"})'>
+                🇹🇷 TR2025 (PSOKİD)
+            </button>
+            <button class="rag-pill-btn @(_kaynakFiltre?.Contains("EG2025") == true ? "active" : "")"
+                    @onclick='() => SetKaynakFiltre(new List<string>{"EG2025"})'>
+                🇪🇺 EuroGuiDerm
+            </button>
+        </div>
+    </header>
+
+    <!-- ── ANA ÇALIŞMA ALANI (2 SÜTUNLU GRID) ─────────────────────────── -->
+    <div class="rag-grid-layout">
+
+        <!-- SOL: SOHBET & DANIŞMA PANELİ -->
+        <section class="rag-chat-card">
+
+            <!-- Mesaj Listesi -->
+            <div class="rag-chat-scroll" id="ragChatScroll">
+
+                @if (!_mesajlar.Any())
+                {
+                    <!-- Karşılama Ekranı & Hızlı Klinik Danışma Kartları -->
+                    <div class="rag-welcome-box">
+                        <div class="rag-welcome-hero">
+                            <div class="rag-hero-icon-ring">
+                                <i class="ph-duotone ph-chats-circle"></i>
+                            </div>
+                            <h2 class="rag-hero-title">Klinik Kılavuzlara Yapay Zekâ ile Danışın</h2>
+                            <p class="rag-hero-desc">
+                                Güncel kılavuzlar taranarak resmi sayfa ve bölüm atıflarıyla kanıta dayalı yanıt üretilir.
+                                Aşağıdaki klinik konulardan birini seçebilir veya kendi sorunuzu yazabilirsiniz.
+                            </p>
+                        </div>
+
+                        <div class="rag-cards-grid">
+                            @foreach (var kart in _hizliSorular)
+                            {
+                                <button type="button" class="rag-quick-card" @onclick="() => SoruSec(kart.Soru)">
+                                    <div class="rag-qc-icon">
+                                        <i class="@kart.Icon"></i>
+                                    </div>
+                                    <div class="rag-qc-content">
+                                        <div class="rag-qc-title">@kart.Baslik</div>
+                                        <div class="rag-qc-desc">@kart.Soru</div>
+                                    </div>
+                                    <i class="ph-bold ph-arrow-up-right rag-qc-arrow"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @foreach (var msg in _mesajlar)
+                {
+                    if (msg.Role == "user")
+                    {
+                        <div class="rag-bubble-row user-row fade-in">
+                            <div class="rag-user-bubble">
+                                <div class="rag-bubble-sender">
+                                    <i class="ph-bold ph-user-circle"></i> Siz (Hekim)
+                                </div>
+                                <div class="rag-bubble-text">@msg.Text</div>
+                            </div>
+                        </div>
+                    }
+                    else if (msg.IsLoading)
+                    {
+                        <div class="rag-bubble-row ai-row fade-in">
+                            <div class="rag-ai-bubble loading-bubble">
+                                <div class="rag-loading-indicator">
+                                    <div class="rag-dot-wave">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                    <span class="rag-loading-text">2025 Klinik Kılavuzları taranıyor ve kanıtlar inceleniyor…</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (msg.IsError)
+                    {
+                        <div class="rag-bubble-row ai-row fade-in">
+                            <div class="rag-ai-bubble error-bubble">
+                                <i class="ph-fill ph-warning-circle"></i>
+                                <span>@msg.Text</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="rag-bubble-row ai-row fade-in">
+                            <div class="rag-ai-bubble @(msg == _secilenCevap ? "active-bubble" : "")">
+                                <div class="rag-ai-bubble-head">
+                                    <div class="rag-ai-brand">
+                                        <span class="rag-ai-logo-tag">SEDA RAG</span>
+                                        <span class="rag-ai-title">Kılavuz Referans Cevabı</span>
+                                    </div>
+                                    @if (msg.IslemSuresiMs > 0)
+                                    {
+                                        <span class="rag-ai-time">@((int)msg.IslemSuresiMs) ms</span>
+                                    }
+                                </div>
+
+                                <div class="rag-ai-text">
+                                    @((MarkupString)RenderMarkdown(msg.Text))
+                                </div>
+
+                                @if (msg.Sources?.Any() == true)
+                                {
+                                    <div class="rag-ai-foot">
+                                        <div class="rag-chip-list">
+                                            @foreach (var s in msg.Sources)
+                                            {
+                                                <span class="rag-chip @(s.KaynakKodu == "TR2025" ? "chip-tr" : "chip-eg")">
+                                                    <i class="ph-bold ph-bookmark-simple"></i>
+                                                    @s.KaynakKodu &nbsp;·&nbsp; Sayfa @s.Sayfa
+                                                </span>
+                                            }
+                                        </div>
+
+                                        <button type="button" class="rag-view-evidence-btn" @onclick="() => KaynakSec(msg)">
+                                            <i class="ph-bold ph-newspaper"></i>
+                                            <span>@(msg == _secilenCevap ? "Kanıtları Kapat" : "Resmi Kanıtları İncele")</span>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- ALT: GİRİŞ ALANI (INPUT BAR) -->
+            <div class="rag-input-dock">
+                <div class="rag-input-box">
+                    <textarea
+                        class="rag-textarea"
+                        placeholder="Kılavuzlara klinik sorunuzu yazın… (Göndermek için Enter, yeni satır için Shift+Enter)"
+                        @bind="_soruMetni"
+                        @bind:event="oninput"
+                        @onkeydown="InputKeyDown"
+                        rows="1"
+                        maxlength="500"
+                        disabled="@_yukleniyor"
+                        id="ragTextArea">
+                    </textarea>
+
+                    <button type="button" class="rag-submit-btn @(_yukleniyor ? "busy" : "")"
+                            @onclick="SoruGonder"
+                            disabled="@(_yukleniyor || string.IsNullOrWhiteSpace(_soruMetni))"
+                            title="Soruyu Gönder (Enter)">
+                        @if (_yukleniyor)
+                        {
+                            <div class="rag-btn-spinner"></div>
+                        }
+                        else
+                        {
+                            <i class="ph-bold ph-paper-plane-right"></i>
+                            <span>Danış</span>
+                        }
+                    </button>
+                </div>
+
+                <div class="rag-dock-meta">
+                    <span class="rag-counter @(_soruMetni.Length > 450 ? "warn" : "")">
+                        @_soruMetni.Length / 500
+                    </span>
+
+                    @if (_mesajlar.Any())
+                    {
+                        <button type="button" class="rag-reset-btn" @onclick="SohbetiTemizle">
+                            <i class="ph ph-trash"></i> Sohbeti Temizle
+                        </button>
+                    }
+
+                    <span class="rag-legal-hint">
+                        <i class="ph-fill ph-shield-check"></i>
+                        Üretilen yanıtlar hekimin klinik kanaatini destekleme amaçlıdır.
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SAĞ: RESMİ KILAVUZ KANITLARI PANELİ -->
+        <aside class="rag-evidence-sidebar">
+            <div class="rag-evidence-header">
+                <div class="rag-evidence-title">
+                    <i class="ph-duotone ph-files"></i>
+                    <h3>Resmi Kılavuz Kanıtları</h3>
+                </div>
+                @if (_secilenCevap?.Sources?.Any() == true)
+                {
+                    <span class="rag-evidence-count">@_secilenCevap.Sources.Count Referans</span>
+                }
+            </div>
+
+            <div class="rag-evidence-scroll">
+                @if (_secilenCevap?.Sources?.Any() == true)
+                {
+                    @foreach (var src in _secilenCevap.Sources)
+                    {
+                        <div class="rag-evidence-card @(src.KaynakKodu == "TR2025" ? "border-tr" : "border-eg") fade-in">
+                            <div class="rag-ev-top">
+                                <span class="rag-ev-tag @(src.KaynakKodu == "TR2025" ? "tag-tr" : "tag-eg")">
+                                    @(src.KaynakKodu == "TR2025" ? "🇹🇷 TR2025 (PSOKİD)" : "🇪🇺 EuroGuiDerm")
+                                </span>
+                                <span class="rag-ev-page">
+                                    <i class="ph-bold ph-book-open"></i> Sayfa @src.Sayfa
+                                </span>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(src.Bolum))
+                            {
+                                <div class="rag-ev-heading">@src.Bolum</div>
+                            }
+
+                            <div class="rag-ev-docname">@src.DisplaySource</div>
+
+                            @if (!string.IsNullOrWhiteSpace(src.Alinti))
+                            {
+                                <div class="rag-ev-quote-box">
+                                    <i class="ph-fill ph-quotes"></i>
+                                    <p>@src.Alinti</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="rag-evidence-empty">
+                        <div class="rag-ev-empty-icon">
+                            <i class="ph-duotone ph-book-bookmark"></i>
+                        </div>
+                        <h4>Kılavuz Kanıt Masası</h4>
+                        <p>
+                            Bir soru sorduğunuzda veya soldaki yanıtta <strong>"Resmi Kanıtları İncele"</strong> butonuna bastığınızda; kılavuzun ilgili sayfa numaraları, başlıkları ve doğrulanmış metin pasajları burada görüntülenecektir.
+                        </p>
+                    </div>
+                }
+            </div>
+        </aside>
+
+    </div>
+</div>
+
+@code {
+    private string _soruMetni = "";
+    private bool _yukleniyor = false;
+    private List<ChatMessage> _mesajlar = new();
+    private ChatMessage? _secilenCevap;
+    private List<string>? _kaynakFiltre = null;
+
+    private record HizliSoru(string Baslik, string Soru, string Icon);
+
+    private readonly List<HizliSoru> _hizliSorular = new()
+    {
+        new("PASI & Şiddet Eşikleri", "PAŞİ > 10 ve DYKİ > 10 eşik değerleri ve tedavi basamağı nedir?", "ph-duotone ph-chart-line-up"),
+        new("Sistemik Tedavi Fazları", "Psoriaziste indüksiyon ve idame tedavi fazlarının süreleri nelerdir?", "ph-duotone ph-pill"),
+        new("Biyolojik Öncesi Tarama", "Biyolojik ajan başlamadan önce zorunlu olan laboratuvar ve taramalar nelerdir?", "ph-duotone ph-dna"),
+        new("Psoriatik Artrit & FTR", "Sabah tutukluğu ve eklem tutulumunda romatoloji/FTR sevk kriterleri nelerdir?", "ph-duotone ph-person-simple-walk"),
+        new("Tırnak Tutulumu", "Tırnak tutulumu olan psoriasiste sistemik tedavi kriterleri ve yaklaşım nedir?", "ph-duotone ph-hand-palm"),
+        new("Kardiyovasküler Risk", "Psoriazis hastalarında metabolik sendrom ve LDL takibi nasıl yönetilmelidir?", "ph-duotone ph-heartbeat"),
+    };
+
+    private void SetKaynakFiltre(List<string>? filtre)
+    {
+        _kaynakFiltre = filtre;
+        StateHasChanged();
+    }
+
+    private async Task SoruSec(string soru)
+    {
+        _soruMetni = soru;
+        await SoruGonder();
+    }
+
+    private async Task InputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !_yukleniyor)
+        {
+            await SoruGonder();
+        }
+    }
+
+    private async Task SoruGonder()
+    {
+        var soru = _soruMetni.Trim();
+        if (string.IsNullOrWhiteSpace(soru) || _yukleniyor) return;
+
+        _soruMetni = "";
+        _yukleniyor = true;
+
+        // Kullanıcı sorusunu ekle
+        _mesajlar.Add(new ChatMessage("user", soru));
+
+        // Yükleniyor balonunu ekle
+        var loadingMsg = new ChatMessage("assistant", "", IsLoading: true);
+        _mesajlar.Add(loadingMsg);
+        StateHasChanged();
+
+        await ScrollToBottom();
+
+        // API çağrısı
+        var (result, error) = await ApiService.QueryGuidelineAsync(soru, _kaynakFiltre);
+
+        // Yükleniyor balonunu kaldır
+        _mesajlar.Remove(loadingMsg);
+        _yukleniyor = false;
+
+        if (error is not null)
+        {
+            _mesajlar.Add(new ChatMessage("assistant", error, IsError: true));
+        }
+        else if (result is not null)
+        {
+            var cevapMetni = result.Bulunamadi
+                ? "Bu soruya ilişkin bilgi verilen kılavuz bölümlerinde yer almamaktadır. Lütfen kılavuzun ilgili bölümünü doğrudan inceleyiniz."
+                : result.Cevap;
+
+            var yeniMesaj = new ChatMessage(
+                Role: "assistant",
+                Text: cevapMetni,
+                Sources: result.Kaynaklar,
+                IslemSuresiMs: result.IslemSuresiMs
+            );
+            _mesajlar.Add(yeniMesaj);
+
+            // Yeni yanıtın kanıtlarını sağ panelde otomatik göster
+            if (result.Kaynaklar?.Any() == true)
+            {
+                _secilenCevap = yeniMesaj;
+            }
+        }
+
+        StateHasChanged();
+        await ScrollToBottom();
+    }
+
+    private void KaynakSec(ChatMessage msg)
+    {
+        _secilenCevap = _secilenCevap == msg ? null : msg;
+        StateHasChanged();
+    }
+
+    private void SohbetiTemizle()
+    {
+        _mesajlar.Clear();
+        _secilenCevap = null;
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("scrollToBottom", "ragChatScroll");
+        }
+        catch { }
+    }
+
+    private static string FixMojibake(string text)
+    {
+        if (string.IsNullOrEmpty(text) || (!text.Contains("Ã") && !text.Contains("Ä") && !text.Contains("Å")))
+            return text;
+
+        return text
+            .Replace("Ã¶", "ö")
+            .Replace("Ã¼", "ü")
+            .Replace("Ã§", "ç")
+            .Replace("Ä±", "ı")
+            .Replace("ÄŸ", "ğ")
+            .Replace("ÅŸ", "ş")
+            .Replace("Ã–", "Ö")
+            .Replace("Ãœ", "Ü")
+            .Replace("Ã‡", "Ç")
+            .Replace("Ä°", "İ")
+            .Replace("Äž", "Ğ")
+            .Replace("Åž", "Ş");
+    }
+
+    private string RenderMarkdown(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+
+        // 0. Karakter Kodlama (Mojibake) Onarımı
+        text = FixMojibake(text);
+
+        // 1. XSS ve HTML Güvenliği
+        var encoded = System.Net.WebUtility.HtmlEncode(text);
+
+        // 2. Başlıklar (örn: ### Başlık veya ## Başlık)
+        encoded = Regex.Replace(encoded, @"^###\s+(.+)$", "<h4 class=\"rag-text-heading\">$1</h4>", RegexOptions.Multiline);
+        encoded = Regex.Replace(encoded, @"^##\s+(.+)$", "<h3 class=\"rag-text-subheading\">$1</h3>", RegexOptions.Multiline);
+
+        // 3. Kalın metin: **metin**
+        encoded = Regex.Replace(encoded, @"\*\*(.+?)\*\*", "<strong class=\"rag-text-bold\">$1</strong>");
+
+        // 4. İtalik metin: __metin__
+        encoded = Regex.Replace(encoded, @"__(.+?)__", "<em class=\"rag-text-italic\">$1</em>");
+
+        // 5. Kılavuz atıfları: (TR2025, s. 45), [EG2025, sayfa 12] vb.
+        encoded = Regex.Replace(
+            encoded,
+            @"[\(\[](TR2025|EG2025)[,\s]+(s\.\s*\d+|sayfa\s*\d+)[\)\]]",
+            "<span class=\"rag-cite-tag\"><i class=\"ph-bold ph-bookmark-simple\"></i> $1, $2</span>",
+            RegexOptions.IgnoreCase);
+
+        // 6. Satır içi kod / etken madde: `metin`
+        encoded = Regex.Replace(encoded, @"`([^`]+)`", "<code class=\"rag-code\">$1</code>");
+
+        // 7. Madde işaretli liste: - madde, * madde veya • madde
+        encoded = Regex.Replace(encoded, @"^[\s]*[-•*]\s+(.+)$", "<div class=\"rag-list-item\"><span class=\"rag-bullet\">▪</span><span>$1</span></div>", RegexOptions.Multiline);
+
+        // 8. Numaralı liste: 1. madde, 2. madde
+        encoded = Regex.Replace(encoded, @"^[\s]*(\d+)\.\s+(.+)$", "<div class=\"rag-list-item\"><span class=\"rag-num-bullet\">$1.</span><span>$2</span></div>", RegexOptions.Multiline);
+
+        // 9. Tek yıldız italik: *metin* (başında ve sonunda başka yıldız olmayan)
+        encoded = Regex.Replace(encoded, @"(?<!\*)\*([^*\n]+?)\*(?!\*)", "<em class=\"rag-text-italic\">$1</em>");
+
+        // 10. Tek alt çizgi italik: _metin_ (kelime sınırları içinde, örn. hasta_id gibi değişkenleri bozmadan)
+        encoded = Regex.Replace(encoded, @"(?<![a-zA-Z0-9_])_([^_]+?)_(?![a-zA-Z0-9_])", "<em class=\"rag-text-italic\">$1</em>");
+
+        // 10. Satır sonları (paragraf / boşluk uyumu)
+        encoded = encoded.Replace("\r\n", "\n").Replace("\n", "<br />");
+        encoded = encoded.Replace("</div><br />", "</div>");
+        encoded = encoded.Replace("</h4><br />", "</h4>");
+        encoded = encoded.Replace("</h3><br />", "</h3>");
+
+        return encoded;
+    }
+}

@@ -235,7 +235,7 @@
             <div style="display:flex;gap:12px;align-items:center;">
                 <button type="submit" class="btn btn-primary btn-morph-submit @(_loading ? "is-loading" : "")" disabled="@_loading" title="@(_loading ? "Değerlendiriliyor…" : "Değerlendir")">
                     <div class="btn-morph-content">
-                        <span>🔬</span>
+                        <i class="ph-bold ph-microscope"></i>
                         <span>Değerlendir</span>
                     </div>
                     <div class="btn-morph-spinner"></div>
@@ -286,6 +286,10 @@
                     <span>Raporu İndir</span>
                 }
             </button>
+            <a href="/kilavuz-danisan" class="btn btn-ghost btn-sm" style="color:var(--accent);border-color:rgba(13,148,136,0.4);text-decoration:none;display:inline-flex;align-items:center;gap:6px;" title="TR2025 ve EuroGuiDerm kılavuzlarına yapay zekâ ile danış">
+                <i class="ph-bold ph-books"></i>
+                <span>Kılavuza Danış</span>
+            </a>
             <button class="btn btn-ghost btn-sm" @onclick="ResetForm">
                 ← Yeni Değerlendirme
             </button>

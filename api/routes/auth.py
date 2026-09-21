@@ -21,16 +21,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel
 
 from config.settings import settings
 
 router = APIRouter(tags=["Kimlik Doğrulama"])
-
-# ─── Şifre Hashleme ────────────────────────────────────────────────────────────
-# bcrypt: endüstri standardı tek-yönlü hash algoritması
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ─── Token Şeması ──────────────────────────────────────────────────────────────
 # tokenUrl: Blazor'un token almak için POST atacağı adres
@@ -88,7 +84,19 @@ class TokenData(BaseModel):
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Düz şifre ile bcrypt hash'i karşılaştır."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        pwd_bytes = plain_password.encode("utf-8")[:72]
+        hash_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception:
+        return False
+
+
+def hash_password(password: str) -> str:
+    """Şifreyi bcrypt ile hashle (12 round)."""
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def get_user(username: str) -> Optional[dict]:

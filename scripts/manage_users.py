@@ -28,12 +28,18 @@ UYARI:
 import sys
 import re
 from pathlib import Path
-from passlib.context import CryptContext
+import bcrypt
 
 # ─── Yapılandırma ─────────────────────────────────────────────────────────────
 AUTH_FILE = Path(__file__).parent.parent / "api" / "routes" / "auth.py"
 VALID_ROLES = {"doktor", "admin"}
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    """Şifreyi bcrypt ile hashle (12 round)."""
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 RENKLER = {
     "yesil":  "\033[92m",
@@ -105,7 +111,7 @@ def kullanici_ekle(kullanici_adi: str, sifre: str, rol: str):
         sys.exit(1)
 
     # Şifreyi hashle
-    hashli_sifre = pwd_context.hash(sifre)
+    hashli_sifre = hash_password(sifre)
     print(f"Şifre hashleniyor... {renkli('Tamam', 'yesil')}")
 
     # Yeni kullanıcı bloğunu hazırla
@@ -170,7 +176,7 @@ def sifre_degistir(kullanici_adi: str, yeni_sifre: str):
         print(renkli(f"HATA: '{kullanici_adi}' kullanıcısı bulunamadı.", "kirmizi"))
         sys.exit(1)
 
-    yeni_hash = pwd_context.hash(yeni_sifre)
+    yeni_hash = hash_password(yeni_sifre)
 
     # Kullanıcıya ait hashed_password satırını bul ve değiştir
     # Önce kullanıcı bloğunu bul, sonra sadece o bloktaki hash'i değiştir

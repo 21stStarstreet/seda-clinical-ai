@@ -2795,3 +2795,594 @@ python scripts/backup.py
 | 📋 Audit Log (admin) | http://localhost:5000/audit-log |
 | 🔐 Token alma | http://localhost:8000/token |
 | 📖 FastAPI Docs | http://localhost:8000/docs
+
+---
+
+---
+
+# Faz 5 — RAG v2: Klinik Kılavuz Danışmanı
+
+> **Tarih**: Eylül 2026
+> **Amaç**: SEDA'ya kılavuz tabanlı soru-cevap yeteneği kazandırmak — XGBoost modeli sevk kararı verirken, RAG sistemi "neden?" sorusunu yanıtlar
+> **Mimari**: Retrieval-Augmented Generation (RAG) — ChromaDB + Gemini Embedding + Gemini 3.5 Flash
+> **Proje dizini**: `~/Projects/dermatology_project/rag/`
+
+---
+
+## Neden RAG? Motivasyon
+
+SEDA v1–v4, bir hastanın hangi klinik birime sevk edileceğini deterministik olarak belirliyordu. Ancak klinikte buna ek olarak kritik bir bilgi boşluğu vardı:
+
+```
+"PASI > 10 neden sistemik tedavi eşiği?"
+"Bimekizumab bu hasta profilinde tercih edilmeli mi?"
+"Psoriatik artrit şüphesinde hangi eklem değerlendirmesi yapılmalı?"
+"Gebelikte hangi biyolojikler güvenli?"
+```
+
+Bu sorular ML modeli tarafından yanıtlanamaz. Faz 5, 550+ sayfalık resmi kılavuz metinlerinden anlık, kaynaklı ve Türkçe klinik yanıtlar üretmek için **Retrieval-Augmented Generation (RAG)** mimarisini hayata geçirdi.
+
+---
+
+## Adım 1 — Mimari Karar
+
+| Bileşen | Seçim | Gerekçe |
+|---------|-------|---------|
+| PDF okuma | `pdfplumber` | Kelime düzeyinde font boyutu → otomatik başlık tespiti |
+| Embedding modeli | `gemini-embedding-001` | Türkçe + İngilizce aynı vektör uzayı (çokdilli) |
+| Vektör veritabanı | ChromaDB (kalıcı) | Sıfır altyapı gereksinimi, disk üzerinde HNSW |
+| Mesafe metriği | Cosine | Anlam benzerliği, vektör büyüklüğünden bağımsız |
+| Koleksiyon sayısı | 1 (tek) | Metadata filtresi ile kaynak ayrımı; cross-source retrieval kolay |
+| QA / Üretim modeli | `gemini-3.5-flash` | Hız + maliyet + Türkçe sentez kalitesi |
+| QA sıcaklık | `0.1` | Klinik bağlılık, düşük yaratıcılık sapması |
+
+---
+
+## Adım 2 — Veri Kaynakları (`rag/config.py`)
+
+Sistem iki resmi kılavuzu indeksler:
+
+| Kod | Kaynak | Dil | Konum |
+|-----|--------|-----|-------|
+| `TR2025` | Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD) | Türkçe | `docs/guidelines/psoriasiskitap2025_SONrenkli.pdf` |
+| `EG2025` | EuroGuiDerm — Systemic Treatment of Psoriasis Vulgaris 2025 | İngilizce | `docs/guidelines/Guidelinelar.pdf` |
+
+Tüm sabitler tek bir dosyadan yönetilir — sihirli sayılar koda gömülmez:
+
+```python
+CHUNK_SIZE_WORDS       = 280    # ≈ 350 token → 5 chunk → ~2.000 token bağlam
+CHUNK_OVERLAP_WORDS    = 40     # Ardışık chunk'lar arası örtüşme
+MIN_CHUNK_WORDS        = 25     # Bu eşiğin altındaki sayfalar atlanır (grafik vb.)
+EMBEDDING_MODEL        = "models/gemini-embedding-001"
+EMBEDDING_BATCH_SIZE   = 10     # Free tier için güvenli batch boyutu
+EMBEDDING_DELAY_SEC    = 2.0    # Rate limit koruması: batch aralarında 2s bekleme
+TOP_K                  = 5      # En iyi 5 chunk döndürülür
+MAX_DISTANCE_THRESHOLD = 0.75   # Bu üstündeki hit'ler ilgisiz kabul edilir
+QA_MODEL               = "gemini-3.5-flash"
+QA_TEMPERATURE         = 0.1
+QA_MAX_OUTPUT_TOKENS   = 4096
+```
+
+---
+
+## Adım 3 — PDF Çıkarıcı (`rag/extractor.py`)
+
+**Amaç:** Ham PDF sayfalarını temizlenmiş metin ve zengin metadata'ya dönüştürmek.
+
+### Neden `pdfplumber`?
+
+pdfplumber, diğer PDF kütüphanelerinden farklı olarak **kelime düzeyinde font boyutu bilgisi** sağlar. Bu, bölüm başlıklarını otomatik tespit etmek için kritiktir — büyük fontlu satırlar içerik metniyle karışmamalıdır.
+
+### Gürültü Temizleme (Kaynak Bazlı Regex)
+
+Her kılavuzun tekrarlayan header/footer kalıpları temizlenir:
+
+```python
+_NOISE_PATTERNS = {
+    "TR2025": [
+        r"www\.psokid\.org\s*",
+        r"Türkiye\s+Psoriasis\s+Tedavi\s+Kılavuzu\s*[-–]\s*202[0-9]\s*",
+        r"^\s*\d{1,3}\s*$",   # tek başına sayfa numarası
+    ],
+    "EG2025": [
+        r"EUROGUIDERM\s+GUIDELINE\s+FOR\s+THE\b.*",
+        r"CC\s+BY\s+NC\s+©\s+EDF[^\n]*",
+        r"^\s*\d{1,3}\s*$",
+    ],
+}
+```
+
+### Başlık Tespiti (İki Aşamalı Heuristic)
+
+```python
+# Birincil: font boyutu bazlı
+heading_threshold = median_font_size * 1.30  # Medyanın %130'undan büyük fontlar
+# Yedek: ALL CAPS + noktasız kısa satır
+upper_ratio > 0.6 and not s.endswith(".")
+```
+
+### Çıktı Veri Yapısı
+
+```python
+@dataclass
+class PageData:
+    source_code: str   # 'TR2025' veya 'EG2025'
+    pdf_index:   int   # PDF'deki 0 tabanlı sıra
+    doc_page:    int   # Kılavuzun görünen sayfa numarası (atıf için kritik)
+    heading:     str   # Tespit edilen bölüm başlığı
+    text:        str   # Temizlenmiş ham metin
+    word_count:  int   # Kelime sayısı
+```
+
+---
+
+## Adım 4 — Metin Parçalayıcı (`rag/chunker.py`)
+
+**Amaç:** Sayfa metinlerini anlam bütünlüğünü koruyarak küçük, örtüşen parçalara bölmek.
+
+### Strateji Karşılaştırması
+
+| Strateji | Sorun |
+|----------|-------|
+| Sabit karakter bölümü | Paragraf ortasında keser — anlam kaybolur |
+| Cümle bazlı bölüm | Bazen çok küçük, bazen çok büyük chunk üretir |
+| **Kelime bazlı örtüşmeli pencere (seçilen)** | Paragraf sınırlarına saygı + bağlam sürekliliği ✅ |
+
+### Algoritma
+
+```
+1. Her sayfanın metni önce paragraflara (\n\n ile) bölünür
+2. Paragraf kelimeleri kayan pencereye eklenir
+3. Pencere 280 kelimeyi aşınca chunk kaydedilir
+4. Son 40 kelimeyle yeni pencere başlatılır (örtüşme)
+5. Sayfa sonu örtüşmeyi sıfırlamaz — sayfa kenarındaki cümleler bölünmez
+```
+
+**Chunk Kimliği:** `TR2025_p34_c2` → kaynak + görünen sayfa + sıra. Benzersiz ve deterministic.
+
+```python
+@dataclass
+class Chunk:
+    chunk_id:    str   # 'TR2025_p34_c2'
+    source_code: str
+    heading:     str
+    doc_page:    int
+    text:        str
+    word_count:  int
+```
+
+---
+
+## Adım 5 — Gömme Motoru (`rag/embedder.py`)
+
+**Amaç:** Metin chunk'larını 768 boyutlu sayısal vektörlere dönüştürmek.
+
+### Kritik Tasarım: İki Farklı Görev Türü
+
+RAG sistemlerinde embedding'in iki farklı rolü vardır ve Gemini bunları ayrı optimize eder:
+
+| Rol | Task Type | Ne zaman? |
+|-----|-----------|-----------|
+| Belge indexleme | `RETRIEVAL_DOCUMENT` | Chunk'ları ChromaDB'ye yazarken |
+| Sorgu gömme | `RETRIEVAL_QUERY` | Hekimin sorusunu embed ederken |
+
+Bu ayrım retrieval doğruluğunu belirgin şekilde artırır.
+
+### Çokdilli Üstünlük
+
+`gemini-embedding-001`, Türkçe (TR2025) ve İngilizce (EG2025) metinleri **aynı vektör uzayında** temsil eder. Tek sorguda her iki kaynaktan anlamlı sonuçlar alınabilir.
+
+### Rate Limit Yönetimi
+
+```python
+EMBEDDING_BATCH_SIZE = 10   # Free tier için güvenli batch boyutu
+EMBEDDING_DELAY_SEC  = 2.0  # Batch'ler arası 2 saniye bekleme
+
+# Üstel + kota-duyarlı retry:
+if "429" in err_str or "quota" in err_str:
+    wait = 15 + (attempt * 10)   # 15s → 25s → 35s → ...
+else:
+    wait = 2 ** attempt           # 1s → 2s → 4s → ...
+# Maksimum 6 deneme
+```
+
+---
+
+## Adım 6 — Vektör Veritabanı (`rag/store.py`)
+
+**Amaç:** Chunk embedding'lerini disk üzerinde kalıcı olarak saklamak; hızlı benzerlik sorgusu sağlamak.
+
+### Tek Koleksiyon Kararı
+
+İki kılavuz için iki ayrı koleksiyon yerine **tek koleksiyon** (`seda_guidelines`) seçildi:
+
+- Kaynak filtrelemesi metadata ile: `{"source_code": {"$in": ["TR2025"]}}`
+- Tek sorguda iki kaynaktan sonuç alınabilir (cross-source retrieval)
+- Ekstra karmaşıklık ortadan kalkar
+
+### Cosine Distance
+
+```python
+self._collection = self._client.get_or_create_collection(
+    name=COLLECTION_NAME,
+    metadata={"hnsw:space": "cosine"},  # L2 yerine cosine — metin benzerliği için daha doğru
+)
+```
+
+Cosine distance vektörün büyüklüğünden bağımsız olarak **yön (anlam) benzerliğini** ölçer.
+Aralık: 0 (özdeş anlam) → 2 (tamamen zıt anlam).
+
+### Disk Yapısı
+
+```
+rag/chroma_db/
+├── 74c34421-0e91-4037-a558-f255c5b7cf60/
+│   ├── data_level0.bin    ← HNSW indeks vektörleri
+│   ├── header.bin
+│   ├── length.bin
+│   └── link_lists.bin     ← Approximate Nearest Neighbor graf yapısı
+└── chroma.sqlite3         ← Metadata ve döküman metinleri
+```
+
+---
+
+## Adım 7 — Retriever (`rag/retriever.py`)
+
+**Amaç:** Hekimin sorusunu alıp en ilgili kılavuz bölümlerini döndürmek.
+
+### Retrieval Pipeline
+
+```
+Soru (serbest metin)
+    ↓ embed_query() [RETRIEVAL_QUERY task]
+Sorgu Vektörü (768 boyut)
+    ↓ ChromaDB.query(top_k + 2)       ← +2: filtre kayıplarına karşı tampon
+Raw Hits (distance'a göre sıralı)
+    ↓ Distance threshold filtresi      (max 0.75 — ilgisiz soru → found=False)
+    ↓ Sayfa bazlı çeşitlilik           (aynı sayfadan max 2 chunk)
+    ↓ Top-K kesme                      (varsayılan 5)
+RetrievalResult listesi
+```
+
+### Halüsinasyon Önleme: Distance Threshold
+
+```python
+MAX_DISTANCE_THRESHOLD = 0.75
+# Cosine distance > 0.75 → ilgisiz kabul edilir
+# found=False → QA Engine hiç çağrılmaz
+# Konu dışı sorulara uydurma yanıt üretilmez
+```
+
+### Benzerlik Yüzdesi (UI'da görüntülenir)
+
+```python
+@property
+def similarity_pct(self) -> int:
+    # cosine distance ∈ [0, 2]; 0 = aynı, 2 = zıt
+    return max(0, int((2.0 - self.distance) / 2.0 * 100))
+# Örnek: distance=0.32 → %84 benzerlik
+```
+
+---
+
+## Adım 8 — QA Motoru (`rag/qa_engine.py`)
+
+**Amaç:** Retrieval bağlamı + hekim sorusu → yapılandırılmış Türkçe klinik yanıt.
+
+### Kritik Tasarım Notu — Sistem Promptu
+
+> Kötü bir system prompt RAG'ı anlamsız hale getirir. LLM ya bağlamın dışına çıkarak hallüsinasyon üretir (çok gevşek), ya da bağlamda açıkça yazılı şeyleri dahi söylemekten kaçınır (çok katı). Doğru denge: "SADECE bu bağlamdan cevap ver, ama cevabı kendi kelimelerinle yaz."
+
+### Sistem Promptu Prensipleri
+
+| Prensip | Uygulama |
+|---------|----------|
+| **Kanıta dayalı** | Yalnızca sağlanan BAĞLAM bloğundaki kılavuz pasajlarına dayanır |
+| **İlaç bilgisi** | Kılavuzda geçen etken maddeler (metotreksat, anti-TNF, anti-IL17, JAK...) açıklanabilir |
+| **Klinik sentez** | Dolaylı sorulara bağlamdaki bilgiyi sentezle — hemen "bulunamadı" deme |
+| **Bulunamadı eşiği** | Yalnızca kılavuzla hiçbir klinik ilgi yoksa `bulunamadi: true` |
+| **Zorunlu atıf** | Her önemli tespitin yanında: `(TR2025, s.12)` |
+| **Dil** | Akademik, akıcı, hekim seviyesinde Türkçe |
+
+### JSON Çıktı Şeması
+
+```json
+{
+  "cevap": "Türkçe klinik açıklama metni. Önemli tespitler için (TR2025, s.34) gibi atıf içerir.",
+  "kaynaklar": [
+    {
+      "kaynak_kodu":    "TR2025",
+      "display_source": "Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD)",
+      "sayfa":          34,
+      "bolum":          "Sistemik Tedavi Kriterleri",
+      "alinti":         "Kılavuzdan alınan kilit ifade (maks 120 karakter)"
+    }
+  ],
+  "bulunamadi": false
+}
+```
+
+### Sağlam JSON Parse Katmanı
+
+Gemini bazen Markdown kod bloğu döndürebilir. Sistem dört aşamalı savunma kurar:
+
+```
+1. json.loads(raw, strict=False)              → kontrol karakterlerini tolere eder
+2. ```json...``` Markdown bloğu               → iç kısmı çıkarır, temiz JSON alınır
+3. Regex ile "cevap": alanı ve kaynaklar      → ayrıca parse edilir
+4. Ham metni yanıt olarak kabul et            → son çare
+```
+
+### Fallback Mekanizması
+
+Gemini API erişilemezse sistem çökmez:
+
+```python
+# En iyi chunk'ın metni doğrudan döndürülür
+cevap = "(LLM yanıt üretemedi — kılavuz metni doğrudan aktarılıyor)\n\n" + best.text
+# fallback_kullanildi: True bayrağı → UI'da uyarı gösterilir
+```
+
+---
+
+## Adım 9 — İndeksleme Aracı (`rag/index_cli.py`)
+
+**Amaç:** PDF kaynaklarını parse edip ChromaDB'ye tek seferlik yazmak.
+
+### Kullanım
+
+```bash
+# Normal indeksleme (zaten doluysa atlar)
+python -m rag.index_cli
+
+# Mevcut DB'yi silerek yeniden indeksle
+python -m rag.index_cli --force
+
+# Sadece bir kaynağı indeksle
+python -m rag.index_cli --source TR2025
+
+# Mevcut durumu kontrol et
+python -m rag.index_cli --check
+```
+
+### 4 Aşamalı Pipeline
+
+```
+📄 1/4 PDF Metin Çıkarma...
+  [TR2025] 312 sayfa işleniyor...
+  [EG2025] 231 sayfa işleniyor...
+  ⏱  12.4s
+
+✂️  2/4 Metni Chunk'lara Bölme...
+  Toplam chunk: 1.147
+  ⏱  0.3s
+
+🔢 3/4 Embedding (Gemini gemini-embedding-001)...
+  1147 chunk × ~280 kelime ≈ API çağrısı yapılıyor...
+  Embedding: 1147/1147 (100%)
+  ⏱  ~15 dakika (Free Tier, 2s batch arası bekleme)
+
+💾 4/4 ChromaDB'ye Kaydediliyor...
+  Kaydedildi: 1147/1147
+  ⏱  2.1s
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ İNDEXLEME TAMAMLANDI
+  📦 Toplam chunk: 1147
+  ⏱  Toplam süre: ~16 dakika
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+> **Not:** İndeksleme yalnızca bir kez çalıştırılır. ChromaDB disk üzerinde kalıcıdır; API her başlatıldığında yalnızca mevcut koleksiyon açılır, yeniden indeksleme yapılmaz.
+
+---
+
+## Adım 10 — FastAPI Entegrasyonu (`api/main.py`)
+
+### Başlangıç — Lazy Loading
+
+```python
+# Uygulama başlarken RAG servisleri yüklenir
+global rag_retriever, rag_qa
+
+_store = VectorStore()
+if _store.chunk_count > 0:
+    _embedder     = Embedder()
+    rag_retriever = Retriever(_embedder, _store)
+    rag_qa        = QAEngine()
+    print(f"[RAG] ✅ Hazır — {_store.chunk_count} chunk yüklendi.")
+else:
+    print("[RAG] ⚠️  ChromaDB henüz indexlenmemiş. Çalıştırın: python -m rag.index_cli")
+    # Sistem çalışmaya devam eder; /guideline-query → 503
+```
+
+### Yeni Endpoint
+
+```python
+@app.post("/guideline-query")
+@limiter.limit("10/minute")   # Gemini çağrısı pahalı — dakikada 10 yeterli
+async def guideline_query(
+    request: Request,
+    body: GuidelineQueryRequest,
+    current_user: TokenData = Depends(get_current_user),   # JWT zorunlu
+):
+    ...
+```
+
+**İstek:**
+```json
+{
+  "soru": "PASI > 10 olduğunda hangi tedavi basamağına geçilmeli?",
+  "kaynak_filtre": ["TR2025"]   // null → her iki kaynak
+}
+```
+
+**Akış:**
+```
+JWT doğrulama + rate limit kontrolü
+    ↓
+rag_retriever.retrieve(soru, kaynak_filtre)  → retrieval_ms ölçümü
+    ↓
+rag_qa.answer(soru, retrieval, retrieval_ms)
+    ↓
+qa_response.to_dict()  → JSON yanıt
+```
+
+| Endpoint | Method | Auth | Limit | Açıklama |
+|----------|--------|------|-------|----------|
+| `/guideline-query` | POST | JWT | 10/dak | Kılavuz soru-cevap (RAG) |
+
+---
+
+## Adım 11 — Blazor Arayüzü (`KilavuzDanisan.razor`)
+
+**Sayfa URL:** `/kilavuz-danisan`
+
+### Sayfa Yapısı
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  📚 Klinik Kılavuz Danışmanı                                     │
+│  TR2025 (PSOKİD)  ·  EuroGuiDerm 2025  ·  1.100+ taranmış bölüm │
+│  [ Tümü ] [ 🇹🇷 TR2025 (PSOKİD) ] [ 🇪🇺 EuroGuiDerm ]          │
+├────────────────────────────────┬─────────────────────────────────┤
+│  SOHBET PANELİ                 │  KAYNAKLAR PANELİ               │
+│                                │                                 │
+│  Hızlı Klinik Kartlar:         │  📄 TR2025, s.34                │
+│  • PASI eşiği                  │  Sistemik Tedavi Kriterleri     │
+│  • Psoriatik artrit            │  Benzerlik: %84                 │
+│  • Biyolojik seçim             │  "PASI > 10 veya BSA > %10..."  │
+│  • Gebelikte tedavi            │  ─────────────────────────────  │
+│  • Nail psoriasis              │  📄 EG2025, s.89               │
+│                                │  Biologic Treatment Selection   │
+│  ──────────────────────────    │  Benzerlik: %79                 │
+│  [ Sorunuzu yazın...     ]     │  "In patients with PASI..."     │
+│  [         Danış         ]     │  ─────────────────────────────  │
+│                                │  ⏱ 1.240 ms                    │
+│                                │  🤖 Gemini 3.5 Flash           │
+│                                │  📦 5 chunk tarandı             │
+└────────────────────────────────┴─────────────────────────────────┘
+```
+
+### UI Özellikleri
+
+- **Sohbet tabanlı:** Soru-yanıt çiftleri kronolojik olarak birikir; bağlam takibi kolaydır
+- **Hızlı klinik kartlar:** Sık sorulan senaryolar tek tıkla sorulur — hekim iş akışına uygun
+- **Kaynak paneli:** Her yanıt için kılavuz kaynağı, sayfa numarası, bölüm adı ve benzerlik yüzdesi gösterilir
+- **Kaynak filtresi:** TR2025, EG2025 veya ikisi birden — sorgu kapsamı hekime bırakılır
+- **Sohbet sıfırlama:** Yeni konuşma başlatma butonu
+- **Karşılama ekranı:** İlk açılışta boş sohbette kılavuz adları ve hızlı klinik kartlar gösterilir
+
+---
+
+## Adım 12 — Build ve Doğrulama
+
+### İndeks Durumu Kontrolü
+
+```bash
+python -m rag.index_cli --check
+
+# Beklenen çıktı:
+# 📂 ChromaDB Yolu: .../rag/chroma_db
+# ✅ 1147 chunk mevcut — RAG hazır.
+```
+
+### API Uçtan Uca Testi
+
+```bash
+# 1. Token al
+TOKEN=$(curl -sX POST http://localhost:8000/token \
+  -d "username=doktor&password=cdss2024&grant_type=password" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# 2. Kılavuz sorusu gönder
+curl -sX POST http://localhost:8000/guideline-query \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"soru": "PASI skoruna göre hastalık şiddeti nasıl sınıflandırılır?"}' \
+  | python3 -m json.tool
+
+# Beklenen yanıt:
+# {
+#   "cevap": "Türkiye Psoriasis Tedavi Kılavuzu 2025'e göre PASI skoru...",
+#   "kaynaklar": [{ "kaynak_kodu": "TR2025", "sayfa": 18, ... }],
+#   "bulunamadi": false,
+#   "islem_suresi_ms": 1240.3
+# }
+```
+
+---
+
+## Öğrenilen Dersler
+
+1. **Sistem promptu en kritik bileşendir** — Çok gevşek → hallüsinasyon; çok katı → bağlamdaki doğru bilgiler bile söylenmez. Doğru denge: "SADECE bu bağlamdan cevap ver, ama cevabı kendi kelimelerinle yaz."
+
+2. **Distance threshold olmadan RAG işe yaramaz** — Eşik yoksa konu dışı sorulara uydurma yanıt üretilir. `0.75` değeri `found=False` döndürerek LLM'i hiç çağırmaz.
+
+3. **İki farklı embedding task type zorunlu** — `RETRIEVAL_DOCUMENT` (indexleme) ve `RETRIEVAL_QUERY` (sorgulama) Gemini tarafından ayrı optimize edilir; ikisi için aynı task type retrieval doğruluğunu düşürür.
+
+4. **Tek koleksiyon + metadata filtresi** — İki ayrı koleksiyon gereksiz karmaşıklık yaratır. `{"source_code": {"$in": ["TR2025"]}}` ile kaynak kısıtlaması ve çapraz kaynak retrieval aynı anda desteklenir.
+
+5. **pdfplumber font boyutu = başlık tespiti** — Regex veya heuristic yöntemlerin önünde. Kılavuz içinde "Bölüm X" formatı tutarsızsa font büyüklüğü tek güvenilir göstergedir.
+
+6. **Free Tier quota yönetimi** — `batch_size=10`, `delay=2s` ve üstel+kota-duyarlı retry olmadan büyük indeksleme işlemleri 429 hatası ile yarıda kesilir.
+
+7. **Fallback her zaman gerekli** — Gemini API geçici olarak erişilemez olabilir. Ham chunk metnini doğrudan döndüren fallback, kullanıcıya boş ekran yerine kılavuz bilgisi sunar.
+
+---
+
+## Üretilen Dosyalar (Faz 5 — 8 yeni modül)
+
+```
+dermatology_project/
+├── rag/
+│   ├── config.py        ← YENİ: Tüm sabitler (chunk boyutu, eşikler, model adları, kaynaklar)
+│   ├── extractor.py     ← YENİ: PDF → temiz PageData (pdfplumber, font-bazlı başlık tespiti)
+│   ├── chunker.py       ← YENİ: PageData → örtüşen Chunk listesi (kayan pencere algoritması)
+│   ├── embedder.py      ← YENİ: Gemini embedding + retry + rate limit yönetimi
+│   ├── store.py         ← YENİ: ChromaDB koleksiyon yönetimi (upsert + cosine query)
+│   ├── retriever.py     ← YENİ: Soru → Top-K chunk (threshold + sayfa çeşitliliği)
+│   ├── qa_engine.py     ← YENİ: Bağlam + soru → Gemini → JSON yanıt (fallback dahil)
+│   ├── index_cli.py     ← YENİ: Tek seferlik indeksleme pipeline'ı (CLI aracı)
+│   └── chroma_db/       ← Kalıcı ChromaDB verisi (git'e girmiyor)
+│
+├── api/main.py                                         ← /guideline-query endpoint'i eklendi
+│
+└── cdss_web/
+    ├── Components/Pages/KilavuzDanisan.razor           ← YENİ: Chat tabanlı kılavuz UI
+    └── Services/CdssApiService.cs                      ← GuidelineQueryAsync() eklendi
+```
+
+---
+
+## Çalıştırma Komutları
+
+```bash
+# 1. İlk kurulum — indeksleme (bir kez çalıştırılır)
+source .venv/bin/activate
+python -m rag.index_cli
+
+# 2. Terminal 1 — FastAPI Backend
+uvicorn api.main:app --reload --port 8000
+
+# 3. Terminal 2 — Blazor Web Arayüzü
+cd cdss_web && dotnet run --urls "http://localhost:5000"
+```
+
+| Sayfa | URL |
+|-------|-----|
+| 📚 Kılavuz Danışmanı | http://localhost:5000/kilavuz-danisan |
+| 🔬 Hasta Değerlendirme | http://localhost:5000/degerlendirme |
+| 📋 Audit Log (admin) | http://localhost:5000/audit-log |
+| 📖 FastAPI Docs | http://localhost:8000/docs |
+
+---
+
+## Sistem Sınırları ve Klinik Uyarılar
+
+> **Bu sistem klinik karar destek aracıdır. Ürettiği yanıtlar yalnızca ilgili kılavuz metinlerine dayanır ve bilimsel danışma niteliği taşır. Nihai tedavi kararı her zaman hekime aittir.**
+
+- LLM yanıtı kılavuzda bulunmayan bilgi üretmez — distance threshold + sistem promptu ile önlenir
+- ChromaDB indekslenmemişse `/guideline-query` → `503 Service Unavailable`; diğer endpointler etkilenmez
+- Gemini Free Tier rate limit'e tabidir; yoğun kullanımda `/guideline-query` geçici `429` dönebilir
+- İndeksleme tamamlandıktan sonra ChromaDB disk üzerinde kalıcıdır; API yeniden başlatılırken tekrar indeksleme yapılmaz

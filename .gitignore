@@ -61,6 +61,12 @@ reports/*.html
 docs/guidelines/
 *.pdf
 
+# RAG vector database — tek seferlik indexleme ile lokal üretilir
+rag/chroma_db/
+
 # .NET build artifact'ları — repo'ya girmez
 cdss_web/bin/
 cdss_web/obj/
+
+#agents
+.agents

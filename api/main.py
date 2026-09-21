@@ -55,11 +55,21 @@ llm_explainer: Optional[LLMExplainer] = None
 audit_logger: Optional[AuditLogger] = None
 access_logger: Optional[AccessLogger] = None
 
+# RAG servisleri (opsiyonel — ChromaDB indexlenmemişse None olabilir)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from rag.retriever import Retriever
+    from rag.qa_engine import QAEngine
+
+rag_retriever: Optional["Retriever"] = None
+rag_qa: Optional["QAEngine"] = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Uygulama başlangıç ve kapanış işlemleri."""
     global predictor, shap_explainer, llm_explainer, audit_logger, access_logger
+    global rag_retriever, rag_qa
 
     print("[API] Servisler başlatılıyor...")
     set_global_seed()
@@ -83,6 +93,26 @@ async def lifespan(app: FastAPI):
 
     # Erişim logger (HTTP istek kayıtları — kim, ne zaman, hangi endpoint)
     access_logger = AccessLogger()
+
+    # RAG servisleri — ChromaDB indexlenmemişse uyarı verir ama çalışmaya devam eder
+    try:
+        from rag.embedder import Embedder
+        from rag.store import VectorStore
+        from rag.retriever import Retriever
+        from rag.qa_engine import QAEngine
+
+        _store = VectorStore()
+        if _store.is_empty:
+            print("[RAG] ⚠️  ChromaDB henüz indexlenmemiş. "
+                  "Kılavuz danışmanı devre dışı. "
+                  "Çalıştırın: python -m rag.index_cli")
+        else:
+            _embedder = Embedder()
+            rag_retriever = Retriever(_embedder, _store)
+            rag_qa = QAEngine()
+            print(f"[RAG] ✅ Hazır — {_store.chunk_count} chunk yüklendi.")
+    except Exception as exc:
+        print(f"[RAG] ❌ Başlatılamadı: {exc}. Kılavuz danışmanı devre dışı.")
 
     print("[API] Hazır.")
     yield
@@ -447,3 +477,76 @@ async def get_access_summary(
     if access_logger is None:
         raise HTTPException(status_code=503, detail="Erişim logger hazır değil.")
     return {"ozet": access_logger.kullanici_ozeti()}
+
+
+# ─── RAG: Kılavuz Danışmanı ───────────────────────────────────────────────────
+
+class GuidelineQueryRequest(BaseModel):
+    """Kılavuz danışma isteği."""
+
+    soru: str = Field(
+        ...,
+        min_length=5,
+        max_length=500,
+        description="Hekimin kılavuza yönelttiği serbest metin soru.",
+    )
+    kaynak_filtre: Optional[list[str]] = Field(
+        default=None,
+        description="Kısıtlanacak kaynaklar: ['TR2025'] veya ['EG2025'] veya None (her ikisi).",
+    )
+
+
+@app.post(
+    "/guideline-query",
+    summary="Kılavuz Danışmanı — Soru-Cevap",
+    tags=["Kılavuz Danışmanı"],
+)
+@limiter.limit("10/minute")  # Gemini çağrısı pahalı — dakikada 10 yeterli
+async def guideline_query(
+    request: Request,
+    body: GuidelineQueryRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Klinik kılavuzlara (TR2025 + EG2025) serbest metin sorusu yönelt.
+
+    RAG mimarisi:
+    1. Soruyu Gemini ile embed et
+    2. ChromaDB'den en ilgili 5 kılavuz bölümünü getir
+    3. Gemini'ye bağlam + soru gönder, yanıtı kaynaklı al
+    4. JSON formatında döndür
+
+    Güvenlik:
+    - JWT kimlik doğrulama zorunlu
+    - LLM sadece bağlamdaki bilgiden cevap üretir
+    - İlaç adı/doz bilgisi yasağı sistem promptunda zorunludur
+    """
+    import time
+
+    if rag_retriever is None or rag_qa is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Kılavuz danışmanı henüz hazır değil. "
+                "Yönetici ile iletişime geçin: python -m rag.index_cli"
+            ),
+        )
+
+    t0 = time.time()
+
+    # Retrieval
+    retrieval = rag_retriever.retrieve(
+        query=body.soru,
+        source_filter=body.kaynak_filtre,
+    )
+
+    retrieval_ms = (time.time() - t0) * 1000
+
+    # QA
+    qa_response = rag_qa.answer(
+        soru=body.soru,
+        retrieval=retrieval,
+        islem_suresi_ms=retrieval_ms,
+    )
+
+    return qa_response.to_dict()

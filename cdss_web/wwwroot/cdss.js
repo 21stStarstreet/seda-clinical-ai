@@ -138,3 +138,10 @@ window.toggleTheme = function () {
     } catch (e) { }
 })();
 
+// ─── RAG Chat: Mesaj Listesini Aşağı Kaydır ──────────────────────────────────
+function scrollToBottom(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.scrollTop = el.scrollHeight;
+    }
+}

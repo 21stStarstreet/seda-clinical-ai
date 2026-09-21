@@ -249,4 +249,37 @@ public class CdssApiService
             return new();
         }
     }
+
+    // ─── /guideline-query ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Klinik kılavuz soru-cevap. RAG mimarisi (ChromaDB + Gemini).
+    /// Returns: (response, errorMessage)
+    /// </summary>
+    public async Task<(GuidelineQueryResponse? Result, string? Error)> QueryGuidelineAsync(
+        string soru,
+        List<string>? kaynakFiltre = null)
+    {
+        try
+        {
+            var body = new GuidelineQueryRequest(soru, kaynakFiltre);
+            var request = await CreateRequestAsync(HttpMethod.Post, "/guideline-query");
+            request.Content = JsonContent.Create(body);
+
+            var response = await _http.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body2 = await response.Content.ReadAsStringAsync();
+                return (null, HttpHatasiniCevir(response.StatusCode, body2));
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<GuidelineQueryResponse>(_jsonOptions);
+            return (result, null);
+        }
+        catch (Exception ex)
+        {
+            return (null, $"Bağlantı hatası: {ex.Message}");
+        }
+    }
 }

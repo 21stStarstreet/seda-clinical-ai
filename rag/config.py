@@ -52,6 +52,6 @@ TOP_K = 5
 MAX_DISTANCE_THRESHOLD = 0.75
 
 # ─── Generation ──────────────────────────────────────────────────────────────
-QA_MODEL = "gemini-3.5-flash"
+QA_MODEL = "gemini-3.6-flash"
 QA_TEMPERATURE = 0.1        # Klinik doğruluk ve akıcı sentez
-QA_MAX_OUTPUT_TOKENS = 4096 # Geniş klinik açıklamalar için tam token genişliği
+QA_MAX_OUTPUT_TOKENS = 3500 # Kapsamlı klinik açıklamalar ve kaynak alıntıları için tam bütçe

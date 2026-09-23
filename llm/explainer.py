@@ -298,7 +298,8 @@ class LLMExplainer:
         api_key: str = "",
         enabled: bool = True,
         temperature: float = 0.1,
-        max_tokens: int = 1200,
+        max_tokens: int = 2000,
+        model_name: str = "gemini-3.6-flash",
     ):
         self.enabled = enabled and bool(api_key)
         self._model = None
@@ -308,14 +309,15 @@ class LLMExplainer:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 self._model = genai.GenerativeModel(
-                    model_name="gemini-3.5-flash",
+                    model_name=model_name,
                     system_instruction=SYSTEM_PROMPT,
                     generation_config=genai.GenerationConfig(
                         temperature=temperature,
                         top_p=0.9,
+                        max_output_tokens=max_tokens,
                     ),
                 )
-                print("[LLM] Gemini Flash bağlantısı hazır.")
+                print(f"[LLM] Gemini {model_name} bağlantısı hazır.")
             except Exception as e:
                 print(f"[LLM] Bağlantı kurulamadı: {e}. Fallback modu aktif.")
                 self.enabled = False
@@ -408,4 +410,5 @@ class LLMExplainer:
             enabled=settings.llm_enabled,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
+            model_name=getattr(settings, "llm_model", "gemini-3.6-flash"),
         )

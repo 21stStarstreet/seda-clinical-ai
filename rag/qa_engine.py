@@ -205,39 +205,54 @@ class QAEngine:
             raw = response.text.strip()
             parsed = None
 
-            # 1. Standart JSON parse dene
-            try:
-                clean_raw = raw
-                if "```" in clean_raw:
-                    block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean_raw, re.DOTALL)
-                    if block_match:
-                        clean_raw = block_match.group(1)
-                    else:
-                        parts = clean_raw.split("```")
-                        for part in parts:
-                            part = part.strip()
-                            if part.startswith("json"):
-                                part = part[4:].strip()
-                            if part.startswith("{") and part.endswith("}"):
-                                clean_raw = part
-                                break
+            # 1. Markdown kod bloklarını temizle (```json ... ``` veya ``` ... ```)
+            clean_raw = raw
+            if "```" in clean_raw:
+                block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean_raw, re.DOTALL)
+                if block_match:
+                    clean_raw = block_match.group(1)
+                else:
+                    parts = clean_raw.split("```")
+                    for part in parts:
+                        part = part.strip()
+                        if part.startswith("json"):
+                            part = part[4:].strip()
+                        if part.startswith("{") and part.endswith("}"):
+                            clean_raw = part
+                            break
 
+            # 2. Standart JSON parse dene
+            try:
                 # strict=False satır sonu ve kontrol karakterlerini JSON string içinde kabul eder
                 parsed = json.loads(clean_raw, strict=False)
             except Exception as json_err:
                 logger.warning("[QAEngine] JSON parse uyarısı: %s. Akıllı kurtarma yapılıyor...", json_err)
-                # 2. Akıllı Kurtarma: Eğer JSON yarıda kesildiyse veya kontrol karakteri varsa
-                cevap_match = re.search(r'"cevap"\s*:\s*"((?:[^"\\]|\\.)*)', raw, re.DOTALL)
+
+                # 3. Akıllı Kurtarma (Multi-Strategy Extraction):
+                # İç tırnaklar veya kesilmeler olsa bile "cevap" ve "kaynaklar" bloklarını güvenle ayıkla
+                recovered_cevap = ""
+                cevap_match = re.search(
+                    r'"cevap"\s*:\s*"(.*?)(?:"\s*,\s*"(?:kaynaklar|bulunamadi)|\s*"\s*\}|\Z)',
+                    clean_raw,
+                    re.DOTALL
+                )
+
+                if cevap_match:
+                    extracted = cevap_match.group(1).rstrip()
+                    # Eğer sonundaki kapanış tırnağı ve parantez kalmışsa temizle
+                    if extracted.endswith('"'):
+                        extracted = extracted[:-1]
+                    recovered_cevap = _safe_unescape_json_string(extracted).strip()
+
                 kaynaklar_list = []
-                kaynaklar_match = re.search(r'"kaynaklar"\s*:\s*(\[.*?\])', raw, re.DOTALL)
+                kaynaklar_match = re.search(r'"kaynaklar"\s*:\s*(\[.*?\])', clean_raw, re.DOTALL)
                 if kaynaklar_match:
                     try:
                         kaynaklar_list = json.loads(kaynaklar_match.group(1), strict=False)
                     except Exception:
                         pass
 
-                if cevap_match:
-                    recovered_cevap = _safe_unescape_json_string(cevap_match.group(1))
+                if recovered_cevap:
                     parsed = {
                         "cevap": recovered_cevap,
                         "kaynaklar": kaynaklar_list,
@@ -245,8 +260,9 @@ class QAEngine:
                     }
                 else:
                     # Düz metin olarak gelmişse doğrudan al
+                    clean_text = clean_raw.replace("```json", "").replace("```", "").strip()
                     parsed = {
-                        "cevap": raw.replace("```json", "").replace("```", "").strip(),
+                        "cevap": clean_text,
                         "kaynaklar": kaynaklar_list,
                         "bulunamadi": False,
                     }

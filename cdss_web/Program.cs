@@ -34,7 +34,7 @@ builder.Services.AddHttpClient("FastAPI", client =>
 builder.Services.AddHttpClient<CdssApiService>(client =>
 {
     client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
+    client.Timeout = TimeSpan.FromSeconds(90);
 });
 
 

@@ -2833,7 +2833,7 @@ Bu sorular ML modeli tarafından yanıtlanamaz. Faz 5, 550+ sayfalık resmi kıl
 | Vektör veritabanı | ChromaDB (kalıcı) | Sıfır altyapı gereksinimi, disk üzerinde HNSW |
 | Mesafe metriği | Cosine | Anlam benzerliği, vektör büyüklüğünden bağımsız |
 | Koleksiyon sayısı | 1 (tek) | Metadata filtresi ile kaynak ayrımı; cross-source retrieval kolay |
-| QA / Üretim modeli | `gemini-3.5-flash` | Hız + maliyet + Türkçe sentez kalitesi |
+| QA / Üretim modeli | `gemini-3.6-flash` | Hız + maliyet + Türkçe sentez kalitesi |
 | QA sıcaklık | `0.1` | Klinik bağlılık, düşük yaratıcılık sapması |
 
 ---
@@ -2858,9 +2858,9 @@ EMBEDDING_BATCH_SIZE   = 10     # Free tier için güvenli batch boyutu
 EMBEDDING_DELAY_SEC    = 2.0    # Rate limit koruması: batch aralarında 2s bekleme
 TOP_K                  = 5      # En iyi 5 chunk döndürülür
 MAX_DISTANCE_THRESHOLD = 0.75   # Bu üstündeki hit'ler ilgisiz kabul edilir
-QA_MODEL               = "gemini-3.5-flash"
+QA_MODEL               = "gemini-3.6-flash"
 QA_TEMPERATURE         = 0.1
-QA_MAX_OUTPUT_TOKENS   = 4096
+QA_MAX_OUTPUT_TOKENS   = 3500
 ```
 
 ---

@@ -3664,48 +3664,226 @@ select.form-input {
     margin: 4px 0 0 0;
 }
 
+/* ─── Liquid Glass Segmented Control (Apple iOS 26 Inspired) ─── */
 .rag-filter-group {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(0, 0, 0, 0.25);
-    padding: 4px 8px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: transparent;
+    padding: 0;
 }
 
 .rag-filter-label {
-    font-size: 12px;
+    font-size: 12.5px;
+    font-weight: 500;
     color: #64748b;
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-right: 4px;
+    gap: 5px;
+    margin-right: 2px;
 }
 
+/* Glass Tray / Bezel (Inner Bed) */
+.rag-segmented-track {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    padding: 3px;
+    border-radius: 13px;
+    border: 0.5px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.45), 
+        inset 0 -1px 1px rgba(255, 255, 255, 0.04),
+        0 4px 14px rgba(0, 0, 0, 0.2);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    cursor: pointer;
+}
+
+.rag-segmented-track.is-dragging {
+    cursor: grabbing;
+}
+
+/* Liquid Glass Active Slider (Physical Lens with Prismatic Edge Refraction) */
+.rag-active-slider {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    width: 0;
+    border-radius: 10px;
+    
+    /* Layer 1: Kristal Berraklığında Transparan Cam Gövdesi */
+    background: 
+        linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025) 100%),
+        rgba(13, 148, 136, 0.05);
+    
+    /* Layer 2: Yüksek İndeksli Optik Kırılma ve Doygunluk */
+    backdrop-filter: blur(24px) saturate(210%) contrast(110%) brightness(106%);
+    -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(110%) brightness(106%);
+    
+    /* Layer 3: Sıvı Cam SVG Optik Kırılması (Durgun halde pürüzsüz 'none', hareket/basılma anında aktif) */
+    filter: none;
+    -webkit-filter: none;
+    
+    /* Layer 4: İnceltilmiş Hassas Prizmatik Cam Kenarlığı (Ultra-Thin Hairline Rim) */
+    border: 0.5px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 
+        inset 0 0.5px 1px 0 rgba(255, 255, 255, 0.45),      /* Üst ultra-ince ışık kırılması (Crest Refraction) */
+        inset 1px 0 1.5px -0.5px rgba(56, 189, 248, 0.35),   /* Sol prizmatik cam kırılması (Cyan Dispersion) */
+        inset -1px 0 1.5px -0.5px rgba(45, 212, 191, 0.30),  /* Sağ prizmatik cam kırılması (Teal Dispersion) */
+        inset 0 -1px 1px 0 rgba(0, 0, 0, 0.25),              /* Alt kırılma ve iç yansıma gölgesi */
+        inset 0 0 10px 0 rgba(255, 255, 255, 0.04),          /* İç berrak cam ışıması */
+        0 6px 18px rgba(0, 0, 0, 0.30);                      /* Havada süzülme gölgesi */
+    
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transform-origin: center center;
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), width 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, border-radius 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, width, border-radius;
+}
+
+/* Layer 5: İmleci Takip Eden Kostik Işık Pırıltısı (Caustic Specular) */
+.rag-active-slider::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        circle 80px at var(--pointer-x, 50%) var(--pointer-y, 50%),
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(255, 255, 255, 0.04) 40%,
+        rgba(56, 189, 248, 0.02) 65%,
+        transparent 80%
+    );
+    pointer-events: none;
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+}
+
+/* Layer 6: İnceltilmiş Üst Tepe Işık Çizgisi (Ultra-Fine Crest Flare) */
+.rag-active-slider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 0.5px;
+    background: linear-gradient(
+        90deg, 
+        transparent 0%, 
+        rgba(56, 189, 248, 0.25) 15%, 
+        rgba(255, 255, 255, 0.70) 50%, 
+        rgba(45, 212, 191, 0.25) 85%, 
+        transparent 100%
+    );
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* Basılma & Sürükleme Anındaki Artırılmış Kırılma Fiziği */
+.rag-active-slider.is-pressed {
+    box-shadow: 
+        inset 0 0.5px 1px 0 rgba(255, 255, 255, 0.55),
+        inset 1.2px 0 2px -0.5px rgba(56, 189, 248, 0.40),
+        inset -1.2px 0 2px -0.5px rgba(45, 212, 191, 0.35),
+        inset 0 -1px 1.5px 0 rgba(0, 0, 0, 0.30),
+        0 2px 8px rgba(0, 0, 0, 0.30);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.rag-active-slider.has-refract,
+.rag-active-slider.is-pressed,
+.rag-segmented-track.is-dragging .rag-active-slider {
+    filter: url(#liquidGlassRefract);
+    -webkit-filter: url(#liquidGlassRefract);
+}
+
+.rag-segmented-track.is-dragging .rag-active-slider {
+    box-shadow: 
+        inset 0 0.5px 1.5px 0 rgba(255, 255, 255, 0.65),
+        inset 2px 0 2.5px -0.5px rgba(56, 189, 248, 0.45),
+        inset -2px 0 2.5px -0.5px rgba(45, 212, 191, 0.40),
+        inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.35),
+        inset 0 0 12px 0 rgba(255, 255, 255, 0.05),
+        0 12px 28px rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Button Typography & Physical Tactility */
 .rag-pill-btn {
-    padding: 6px 14px;
-    border-radius: 8px;
-    border: 1px solid transparent;
+    position: relative;
+    z-index: 2;
+    padding: 6px 16px;
+    min-width: 66px;
+    text-align: center;
+    border-radius: 10px;
+    border: none;
     background: transparent;
     color: #94a3b8;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 12.5px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, transform 0.15s ease;
+    white-space: nowrap;
+    outline: none;
+    user-select: none;
 }
 
 .rag-pill-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
 }
 
 .rag-pill-btn.active {
-    background: linear-gradient(135deg, rgba(13, 148, 136, 0.35) 0%, rgba(2, 132, 199, 0.25) 100%);
-    border-color: rgba(20, 184, 166, 0.5);
-    color: #2dd4bf;
+    color: #ffffff;
     font-weight: 600;
-    box-shadow: 0 0 12px rgba(20, 184, 166, 0.25);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .rag-active-slider {
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
+/* Light Theme Liquid Glass Adaptive Layer */
+[data-theme="light"] .rag-segmented-track {
+    background: rgba(226, 232, 240, 0.65);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .rag-pill-btn {
+    color: #64748b;
+}
+
+[data-theme="light"] .rag-pill-btn:hover {
+    color: #0f172a;
+}
+
+[data-theme="light"] .rag-pill-btn.active {
+    color: #0f172a;
+    text-shadow: none;
+}
+
+[data-theme="light"] .rag-active-slider {
+    background: 
+        linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.6) 100%),
+        rgba(20, 184, 166, 0.1);
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+        0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .rag-grid-layout {

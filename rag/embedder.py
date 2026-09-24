@@ -96,12 +96,14 @@ class Embedder:
         self,
         texts: list[str],
         task_type: str,
-        max_retries: int = 6,
+        max_retries: int = 8,
     ) -> list[list[float]]:
         """
         Üstel ve kota duyarlı bekleme ile retry mantığı.
         429 Rate limit veya geçici API hatalarında adaptif bekler.
         """
+        import re
+
         for attempt in range(max_retries):
             try:
                 result = genai.embed_content(
@@ -122,14 +124,20 @@ class Embedder:
                 is_quota = "429" in err_str or "quota" in err_str or "exhausted" in err_str
 
                 if is_quota:
-                    wait = 15 + (attempt * 10)  # 15s, 25s, 35s, 45s...
+                    # Hata mesajında "retry in X.Xs" varsa yakala
+                    retry_match = re.search(r"retry\s+in\s+([\d\.]+)\s*s", err_str)
+                    if retry_match:
+                        suggested = float(retry_match.group(1))
+                        wait = max(suggested + 3.0, 20.0 + (attempt * 15))
+                    else:
+                        wait = 20.0 + (attempt * 15)  # 20s, 35s, 50s, 65s, 80s...
                 else:
-                    wait = 2 ** attempt
+                    wait = 2.0 ** attempt
 
                 if attempt < max_retries - 1:
                     print(
-                        f"\n  ⚠️ [Embedder] API uyarısı ({'Kota/RateLimit' if is_quota else 'Hata'}), "
-                        f"{wait}s beklenip tekrar denenecek (deneme {attempt + 1}/{max_retries})...",
+                        f"\n  ⚠️ [Embedder] API uyarısı ({'Kota/RateLimit 429' if is_quota else 'Hata'}), "
+                        f"{wait:.1f}s beklenip tekrar denenecek (deneme {attempt + 1}/{max_retries})...",
                         flush=True,
                     )
                     time.sleep(wait)

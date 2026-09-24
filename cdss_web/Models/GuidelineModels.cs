@@ -3,11 +3,19 @@ using System.Collections.Generic;
 
 namespace cdss_web.Models;
 
+// ─── Sohbet Geçmişi Turu ──────────────────────────────────────────────────────
+
+public record ConversationTurn(
+    [property: JsonPropertyName("soru")]  string Soru,
+    [property: JsonPropertyName("cevap")] string Cevap
+);
+
 // ─── İstek ───────────────────────────────────────────────────────────────────
 
 public record GuidelineQueryRequest(
     [property: JsonPropertyName("soru")]           string Soru,
-    [property: JsonPropertyName("kaynak_filtre")]  List<string>? KaynakFiltre = null
+    [property: JsonPropertyName("kaynak_filtre")]  List<string>? KaynakFiltre = null,
+    [property: JsonPropertyName("gecmis")]         List<ConversationTurn>? Gecmis = null
 );
 
 // ─── Yanıt ───────────────────────────────────────────────────────────────────

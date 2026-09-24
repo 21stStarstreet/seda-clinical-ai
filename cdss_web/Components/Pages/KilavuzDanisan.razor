@@ -19,27 +19,63 @@
                 <div class="rag-title-row">
                     <h1 class="rag-main-title">Klinik Kılavuz Danışmanı</h1>
                 </div>
-                <p class="rag-meta-sub">
-                    Türkiye Psoriasis Tedavi Kılavuzu 2025 (PSOKİD) &nbsp;·&nbsp; EuroGuiDerm 2025 &nbsp;·&nbsp; 1.100+ taranmış bölüm
-                </p>
+                    <p class="rag-meta-sub">
+                        Türkiye Psoriasis Tedavi Kılavuzu 2025 (PSOKİD) &nbsp;·&nbsp; EuroGuiDerm 2025 &nbsp;·&nbsp; 530 taranmış klinik bölüm
+                    </p>
             </div>
         </div>
 
         <!-- Kaynak Filtreleri -->
         <div class="rag-filter-group">
             <span class="rag-filter-label"><i class="ph ph-funnel"></i> Kılavuz:</span>
-            <button class="rag-pill-btn @(_kaynakFiltre == null ? "active" : "")"
-                    @onclick="() => SetKaynakFiltre(null)">
-                Tümü
-            </button>
-            <button class="rag-pill-btn @(_kaynakFiltre?.Contains("TR2025") == true ? "active" : "")"
-                    @onclick='() => SetKaynakFiltre(new List<string>{"TR2025"})'>
-                🇹🇷 TR2025 (PSOKİD)
-            </button>
-            <button class="rag-pill-btn @(_kaynakFiltre?.Contains("EG2025") == true ? "active" : "")"
-                    @onclick='() => SetKaynakFiltre(new List<string>{"EG2025"})'>
-                🇪🇺 EuroGuiDerm
-            </button>
+            <div class="rag-segmented-track" id="ragSegmentedTrack">
+                <div class="rag-active-slider" id="ragActiveSlider"></div>
+                <button type="button" class="rag-pill-btn @(_kaynakFiltre == null ? "active" : "")"
+                        @onclick="() => SetKaynakFiltre(null)">
+                    Tümü
+                </button>
+                <button type="button" class="rag-pill-btn @(_kaynakFiltre?.Contains("TR2025") == true ? "active" : "")"
+                        @onclick='() => SetKaynakFiltre(new List<string>{"TR2025"})'>
+                    🇹🇷 TR2025 (PSOKİD)
+                </button>
+                <button type="button" class="rag-pill-btn @(_kaynakFiltre?.Contains("EG2025") == true ? "active" : "")"
+                        @onclick='() => SetKaynakFiltre(new List<string>{"EG2025"})'>
+                    🇪🇺 EuroGuiDerm
+                </button>
+            </div>
+            <!-- Sıvı Cam Optik Kırılma Filtresi (Liquid Glass SVG Displacement) -->
+            <svg aria-hidden="true" style="position: absolute; width: 1px; height: 1px; left: -9999px; top: -9999px; opacity: 0.01; pointer-events: none;">
+                <defs>
+                    <filter id="liquidGlassRefract" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+                        <!-- Saf Prizmatik Renk Dağılımı (Düzensiz şekil bozulması YOK, sadece prizma renk ayrışması) -->
+                        <!-- Kırmızı kanal izole et -->
+                        <feColorMatrix in="SourceGraphic" type="matrix"
+                            values="1 0 0 0 0
+                                    0 0 0 0 0
+                                    0 0 0 0 0
+                                    0 0 0 1 0" result="rCh"/>
+                        <!-- Yeşil kanal izole et -->
+                        <feColorMatrix in="SourceGraphic" type="matrix"
+                            values="0 0 0 0 0
+                                    0 1 0 0 0
+                                    0 0 0 0 0
+                                    0 0 0 1 0" result="gCh"/>
+                        <!-- Mavi kanal izole et -->
+                        <feColorMatrix in="SourceGraphic" type="matrix"
+                            values="0 0 0 0 0
+                                    0 0 0 0 0
+                                    0 0 1 0 0
+                                    0 0 0 1 0" result="bCh"/>
+                        <!-- Kanal ofsetleri: Kırmızı → sola, Mavi → sağa (Lateral Chromatic Aberration) -->
+                        <feOffset id="caRedOffset"   in="rCh" dx="0" dy="0" result="rShifted"/>
+                        <feOffset id="caGreenOffset" in="gCh" dx="0" dy="0" result="gShifted"/>
+                        <feOffset id="caBlueOffset"  in="bCh" dx="0" dy="0" result="bShifted"/>
+                        <!-- Screen blend ile RGB kanalları yeniden birleştir -->
+                        <feBlend in="rShifted" in2="gShifted" mode="screen" result="rgMerged"/>
+                        <feBlend in="rgMerged" in2="bShifted" mode="screen"/>
+                    </filter>
+                </defs>
+            </svg>
         </div>
     </header>
 
@@ -303,6 +339,26 @@
         StateHasChanged();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("initSegmentedSlider", "ragSegmentedTrack", "ragActiveSlider");
+            }
+            catch { }
+        }
+        else
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("updateSegmentedSlider", "ragSegmentedTrack", "ragActiveSlider");
+            }
+            catch { }
+        }
+    }
+
     private async Task SoruSec(string soru)
     {
         _soruMetni = soru;
@@ -335,8 +391,12 @@
 
         await ScrollToBottom();
 
+        // Sohbet geçmişini derle (API çağrısından önce — yeni soru henüz eklenmedi)
+        // Son 3 Q/A çiftini topla; yeni soru dahil değil (o bu turdaki soru)
+        var gecmis = DerleGecmis(_mesajlar, maxTur: 3, excludeLoadingAndError: true);
+
         // API çağrısı
-        var (result, error) = await ApiService.QueryGuidelineAsync(soru, _kaynakFiltre);
+        var (result, error) = await ApiService.QueryGuidelineAsync(soru, _kaynakFiltre, gecmis);
 
         // Yükleniyor balonunu kaldır
         _mesajlar.Remove(loadingMsg);
@@ -348,27 +408,126 @@
         }
         else if (result is not null)
         {
-            var cevapMetni = result.Bulunamadi
-                ? "Bu soruya ilişkin bilgi verilen kılavuz bölümlerinde yer almamaktadır. Lütfen kılavuzun ilgili bölümünü doğrudan inceleyiniz."
-                : result.Cevap;
-
-            var yeniMesaj = new ChatMessage(
-                Role: "assistant",
-                Text: cevapMetni,
-                Sources: result.Kaynaklar,
-                IslemSuresiMs: result.IslemSuresiMs
-            );
-            _mesajlar.Add(yeniMesaj);
-
-            // Yeni yanıtın kanıtlarını sağ panelde otomatik göster
-            if (result.Kaynaklar?.Any() == true)
+            // ─── Yanıt Türü Ayrımı ────────────────────────────────────────────────────
+            // FallbackKullanildi=true → LLM (API) başarısız oldu (429/teknik hata).
+            //     Bu durumda "yer almamaktadır" göstermek YANLIŞ — kılavuzda bilgi VAR,
+            //     sadece API şu an cevap veremedi. Doğru mesaj: teknik sorun uyarısı.
+            //
+            // Bulunamadi=true && FallbackKullanildi=false → Retrieval veya LLM gerçekten
+            //     "bu konuda bilgi yok" dedi. Doğru mesaj: "yer almamaktadır".
+            //
+            // Normal yanıt → result.Cevap direkt gösterilir.
+            if (result.FallbackKullanildi)
             {
-                _secilenCevap = yeniMesaj;
+                // Teknik hata — API'den gelen mesajı kullan, error balonu olarak göster
+                _mesajlar.Add(new ChatMessage("assistant", result.Cevap, IsError: true));
+            }
+            else
+            {
+                var cevapMetni = result.Bulunamadi
+                    ? "Bu soruya ilişkin bilgi verilen kılavuz bölümlerinde yer almamaktadır. Lütfen kılavuzun ilgili bölümünü doğrudan inceleyiniz."
+                    : result.Cevap;
+
+                var yeniMesaj = new ChatMessage(
+                    Role: "assistant",
+                    Text: cevapMetni,
+                    Sources: result.Kaynaklar,
+                    IslemSuresiMs: result.IslemSuresiMs
+                );
+                _mesajlar.Add(yeniMesaj);
+
+                // Yeni yanıtın kanıtlarını sağ panelde otomatik göster
+                if (result.Kaynaklar?.Any() == true)
+                {
+                    _secilenCevap = yeniMesaj;
+                }
             }
         }
 
         StateHasChanged();
         await ScrollToBottom();
+    }
+
+    /// <summary>
+    /// Mevcut mesaj listesinden son N sohbet turunu derler.
+    /// Yalnızca gerçek user+assistant çiftleri alınır (loading, error, fallback mesajları atlanır).
+    /// Backend'e gönderilecek ConversationTurn listesi üretilir.
+    ///
+    /// Kritik filtre: "bulunamadı" veya teknik hata mesajları geçmişe dahil edilmez.
+    /// Bu mesajlar preprocessor'ın bağlam füzyonunu zehirler — yanlış konu bağlamı oluşturur.
+    /// </summary>
+    private static List<ConversationTurn> DerleGecmis(
+        List<ChatMessage> mesajlar,
+        int maxTur = 3,
+        bool excludeLoadingAndError = true)
+    {
+        var turler = new List<ConversationTurn>();
+
+        // Gerçek mesajları filtrele (loading ve error balonlarını dışla)
+        var gercekMesajlar = excludeLoadingAndError
+            ? mesajlar.Where(m => !m.IsLoading && !m.IsError).ToList()
+            : mesajlar;
+
+        // user/assistant çiftlerini bul (sondan başa doğru)
+        for (int i = gercekMesajlar.Count - 1; i >= 0 && turler.Count < maxTur; i--)
+        {
+            var msg = gercekMesajlar[i];
+
+            if (msg.Role == "assistant" && !string.IsNullOrWhiteSpace(msg.Text))
+            {
+                // Anlamlı olmayan assistant cevaplarını geçmişe katma:
+                // - "bulunamadı" mesajları → konu bilgisi taşımaz
+                // - Fallback/teknik hata mesajları → yanlış bağlam oluşturur
+                if (IsAnlamliCevap(msg.Text) == false)
+                    continue;
+
+                // Bir sonraki user mesajını bul (bu assistant mesajından önce)
+                for (int j = i - 1; j >= 0; j--)
+                {
+                    if (gercekMesajlar[j].Role == "user" && !string.IsNullOrWhiteSpace(gercekMesajlar[j].Text))
+                    {
+                        turler.Insert(0, new ConversationTurn(
+                            Soru: gercekMesajlar[j].Text,
+                            Cevap: msg.Text.Length > 500
+                                ? msg.Text[..500]   // Uzun cevapları kırp — payload boyutunu sınırla
+                                : msg.Text
+                        ));
+                        i = j; // Bir sonraki iterasyonda bu user mesajından önceye git
+                        break;
+                    }
+                }
+            }
+        }
+
+        return turler;
+    }
+
+    /// <summary>
+    /// Bir assistant yanıtının sohbet geçmişine değer taşıyıp taşımadığını kontrol eder.
+    /// Fallback ve bulunamadı mesajları bağlam füzyonu için kullanılmaz.
+    /// </summary>
+    private static bool IsAnlamliCevap(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        // Bilinen "anlamsız" yanıt kalıpları — bunlar geçmişe katılmaz
+        var anlamsizKaliplar = new[]
+        {
+            "Bu soruya ilişkin bilgi verilen kılavuz bölümlerinde yer almamaktadır",
+            "Kılavuz sorgusu şu an yanıt üretemedi",
+            "Lütfen tekrar deneyin",
+            "(LLM yanıt üretemedi",
+            "kılavuz metni doğrudan aktarılıyor",
+        };
+
+        foreach (var kalip in anlamsizKaliplar)
+        {
+            if (text.Contains(kalip, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        // Çok kısa yanıtlar da geçmişe katılmaz (en az 50 karakter anlamlı klinik içerik)
+        return text.Length >= 50;
     }
 
     private void KaynakSec(ChatMessage msg)

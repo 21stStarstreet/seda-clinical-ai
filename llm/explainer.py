@@ -373,6 +373,8 @@ class LLMExplainer:
 
         try:
             import json
+            import re
+
             prompt = build_explanation_prompt(
                 prediction, shap_explanation,
                 hekim_notu=hekim_notu,
@@ -385,16 +387,63 @@ class LLMExplainer:
             response = self._model.generate_content(prompt)
             raw = response.text.strip()
 
-            # Gemini bazen ```json ... ``` bloğu içine sarabilir, temizle
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
+            # ── Katman 1: Markdown kod bloklarını temizle ─────────────────────
+            clean_raw = raw
+            if "```" in clean_raw:
+                block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean_raw, re.DOTALL)
+                if block_match:
+                    clean_raw = block_match.group(1)
+                else:
+                    parts = clean_raw.split("```")
+                    for part in parts:
+                        part = part.strip()
+                        if part.startswith("json"):
+                            part = part[4:].strip()
+                        if part.startswith("{") and part.endswith("}"):
+                            clean_raw = part
+                            break
 
-            parsed = json.loads(raw)
-            detayli = parsed.get("detayli_epikriz", "").strip()
-            ozet = parsed.get("kisa_ozet", "").strip()
+            parsed = None
+
+            # ── Katman 2: Standart JSON parse (strict=False — kontrol karakterlerini tolere eder) ──
+            try:
+                parsed = json.loads(clean_raw, strict=False)
+            except Exception as json_err:
+                print(f"[LLM] JSON parse uyarısı: {json_err}. Akıllı kurtarma deneniyor...")
+
+                # ── Katman 3: Regex kurtarma — detayli_epikriz ───────────────
+                # Türkçe klinik metinde iç tırnak veya kesim olduğunda regex ile kurtarma
+                detayli_match = re.search(
+                    r'"detayli_epikriz"\s*:\s*"(.*?)(?:"\s*,\s*"kisa_ozet"|\s*"\s*\}|\Z)',
+                    clean_raw, re.DOTALL
+                )
+                ozet_match = re.search(
+                    r'"kisa_ozet"\s*:\s*"(.*?)(?:"\s*\}|\Z)',
+                    clean_raw, re.DOTALL
+                )
+
+                if detayli_match or ozet_match:
+                    def safe_unescape(s: str) -> str:
+                        s = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), s)
+                        s = s.replace(r'\"', '"').replace(r"\n", "\n").replace(r"\t", "\t")
+                        return s
+
+                    parsed = {
+                        "detayli_epikriz": safe_unescape(detayli_match.group(1).rstrip('"')).strip() if detayli_match else "",
+                        "kisa_ozet": safe_unescape(ozet_match.group(1).rstrip('"')).strip() if ozet_match else "",
+                    }
+                    print("[LLM] Regex kurtarma başarılı.")
+                else:
+                    # ── Katman 4: Ham metin — en azından bir şey göster ──────
+                    # JSON tamamen parse edilemiyorsa ham metni detaylı epikriz olarak sun
+                    parsed = {
+                        "detayli_epikriz": clean_raw.replace('{"detayli_epikriz":', "").replace('"}', "").strip(),
+                        "kisa_ozet": "",
+                    }
+                    print("[LLM] Ham metin kurtarma uygulandı.")
+
+            detayli = parsed.get("detayli_epikriz", "").strip() if parsed else ""
+            ozet = parsed.get("kisa_ozet", "").strip() if parsed else ""
             return detayli, ozet, False, kilavuz_atiflar
 
         except Exception as e:

@@ -149,3 +149,80 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"},
         )
         logger.info("[VectorStore] Koleksiyon sıfırlandı.")
+
+    def chunk_count_by_source(self, source_code: str) -> int:
+        """
+        Verilen kaynak koduna ait chunk sayısını döndür.
+
+        Artımlı indexleme için kritik: hangi kaynakların zaten
+        indekslendiğini ve hangilerinin eksik olduğunu anlamak için kullanılır.
+        """
+        try:
+            result = self._collection.get(
+                where={"source_code": {"$eq": source_code}},
+                include=[],  # Sadece sayımı istiyoruz — vektör/metin yok
+            )
+            return len(result["ids"])
+        except Exception as exc:
+            logger.warning("[VectorStore] chunk_count_by_source hatası: %s", exc)
+            return 0
+
+    def delete_by_source(self, source_code: str) -> int:
+        """
+        Verilen kaynak koduna ait tüm chunk'ları sil.
+
+        Kullanım: --force --source EG2025 ile sadece EG2025'i
+        silip yeniden indekslemek için. TR2025'e dokunulmaz.
+
+        Returns:
+            Silinen chunk sayısı.
+        """
+        try:
+            # Önce silinecek ID'leri al (ChromaDB delete where-only destekler ama
+            # count bilgisi için önce get gerekiyor)
+            existing = self._collection.get(
+                where={"source_code": {"$eq": source_code}},
+                include=[],
+            )
+            ids_to_delete = existing["ids"]
+            if not ids_to_delete:
+                logger.info("[VectorStore] Silinecek '%s' chunk'ı bulunamadı.", source_code)
+                return 0
+
+            self._collection.delete(ids=ids_to_delete)
+            logger.info("[VectorStore] %d '%s' chunk'ı silindi.", len(ids_to_delete), source_code)
+            return len(ids_to_delete)
+        except Exception as exc:
+            logger.error("[VectorStore] delete_by_source hatası: %s", exc)
+            raise
+
+    def indexed_sources(self) -> dict[str, int]:
+        """
+        Koleksiyondaki her kaynak kodunun chunk sayısını döndür.
+        Artımlı indexleme durumu raporu için kullanılır.
+
+        Returns:
+            {"TR2025": 265, "EG2025": 0} gibi bir sözlük.
+        """
+        from rag.config import SOURCES
+        return {
+            src: self.chunk_count_by_source(src)
+            for src in SOURCES
+        }
+
+    def get_existing_chunk_ids(self, source_code: str) -> set[str]:
+        """
+        Verilen kaynak koduna ait koleksiyondaki mevcut chunk ID'lerini küme olarak döndür.
+        Checkpointing / Resume mantığı için kullanılır.
+        """
+        try:
+            result = self._collection.get(
+                where={"source_code": {"$eq": source_code}},
+                include=[],
+            )
+            return set(result["ids"]) if result and "ids" in result else set()
+        except Exception as exc:
+            logger.warning("[VectorStore] get_existing_chunk_ids hatası: %s", exc)
+            return set()
+
+

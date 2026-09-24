@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="gemini-3.6-flash", description="Gemini LLM model adı")
     llm_enabled: bool = Field(default=True)
     llm_temperature: float = Field(default=0.1)
-    llm_max_tokens: int = Field(default=2000)
+    llm_max_tokens: int = Field(default=4000)  # Detaylı epikriz (3 karar × paragraf) + özet için yeterli bütçe
 
     # ─── Faz 4: Güvenlik ──────────────────────────────────────────────
     # JWT — Her ortam için özel, rastgele 256-bit anahtar

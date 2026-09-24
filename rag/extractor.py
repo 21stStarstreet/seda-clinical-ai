@@ -185,11 +185,13 @@ class PDFExtractor:
                 f"docs/guidelines/ klasöründe '{pdf_path.name}' dosyası olmalı."
             )
 
+        max_pages = cfg.get("max_pages")
         with pdfplumber.open(str(pdf_path)) as pdf:
-            total = len(pdf.pages)
+            pages_to_process = pdf.pages[:max_pages] if max_pages else pdf.pages
+            total = len(pages_to_process)
             print(f"  [{source_code}] {total} sayfa işleniyor...")
 
-            for idx, page in enumerate(pdf.pages):
+            for idx, page in enumerate(pages_to_process):
                 raw_text = page.extract_text() or ""
                 cleaned = _clean_text(raw_text, source_code)
 

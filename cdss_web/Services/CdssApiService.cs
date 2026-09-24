@@ -254,15 +254,17 @@ public class CdssApiService
 
     /// <summary>
     /// Klinik kılavuz soru-cevap. RAG mimarisi (ChromaDB + Gemini).
+    /// Two-Stage Query Processing: sorgu zenginleştirme + sohbet bağlamı.
     /// Returns: (response, errorMessage)
     /// </summary>
     public async Task<(GuidelineQueryResponse? Result, string? Error)> QueryGuidelineAsync(
         string soru,
-        List<string>? kaynakFiltre = null)
+        List<string>? kaynakFiltre = null,
+        List<ConversationTurn>? gecmis = null)
     {
         try
         {
-            var body = new GuidelineQueryRequest(soru, kaynakFiltre);
+            var body = new GuidelineQueryRequest(soru, kaynakFiltre, gecmis);
             var request = await CreateRequestAsync(HttpMethod.Post, "/guideline-query");
             request.Content = JsonContent.Create(body);
 

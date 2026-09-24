@@ -60,16 +60,18 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from rag.retriever import Retriever
     from rag.qa_engine import QAEngine
+    from rag.query_preprocessor import QueryPreprocessor
 
 rag_retriever: Optional["Retriever"] = None
 rag_qa: Optional["QAEngine"] = None
+rag_preprocessor: Optional["QueryPreprocessor"] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Uygulama başlangıç ve kapanış işlemleri."""
     global predictor, shap_explainer, llm_explainer, audit_logger, access_logger
-    global rag_retriever, rag_qa
+    global rag_retriever, rag_qa, rag_preprocessor
 
     print("[API] Servisler başlatılıyor...")
     set_global_seed()
@@ -100,6 +102,7 @@ async def lifespan(app: FastAPI):
         from rag.store import VectorStore
         from rag.retriever import Retriever
         from rag.qa_engine import QAEngine
+        from rag.query_preprocessor import QueryPreprocessor
 
         _store = VectorStore()
         if _store.is_empty:
@@ -110,7 +113,31 @@ async def lifespan(app: FastAPI):
             _embedder = Embedder()
             rag_retriever = Retriever(_embedder, _store)
             rag_qa = QAEngine()
-            print(f"[RAG] ✅ Hazır — {_store.chunk_count} chunk yüklendi.")
+
+            # Kaynak bazlı durum raporu — hangi kılavuzların indekslendiğini göster
+            try:
+                source_status = _store.indexed_sources()
+                status_parts = [f"{src}: {cnt}" for src, cnt in source_status.items()]
+                status_str = ", ".join(status_parts)
+                missing = [src for src, cnt in source_status.items() if cnt == 0]
+                if missing:
+                    print(f"[RAG] ✅ Hazır — {_store.chunk_count} chunk ({status_str})")
+                    print(f"[RAG] ⚠️  Eksik kaynak(lar): {', '.join(missing)}. "
+                          f"Eklemek için: python -m rag.index_cli --source {missing[0]}")
+                else:
+                    print(f"[RAG] ✅ Hazır — {status_str} (toplam: {_store.chunk_count} chunk)")
+            except Exception as src_exc:
+                print(f"[RAG] ✅ Hazır — {_store.chunk_count} chunk yüklendi. (Durum detayı alınamadı: {src_exc})")
+
+            # Preprocessor: RAG aktifse başlat (bağımsız try — graceful degradation)
+            try:
+                rag_preprocessor = QueryPreprocessor(
+                    api_key=settings.gemini_api_key,
+                )
+                print(f"[RAG] ✅ Preprocessor hazır (Two-Stage Query Processing aktif).")
+            except Exception as prep_exc:
+                print(f"[RAG] ⚠️  Preprocessor başlatılamadı: {prep_exc}. "
+                      "Sorgular kısaltma genişletme olmadan işlenecek.")
     except Exception as exc:
         print(f"[RAG] ❌ Başlatılamadı: {exc}. Kılavuz danışmanı devre dışı.")
 
@@ -481,6 +508,12 @@ async def get_access_summary(
 
 # ─── RAG: Kılavuz Danışmanı ───────────────────────────────────────────────────
 
+class ConversationTurn(BaseModel):
+    """Tek bir sohbet turu: hekim sorusu + AI yanıtı."""
+    soru: str = Field(..., max_length=500)
+    cevap: str = Field(..., max_length=2000)
+
+
 class GuidelineQueryRequest(BaseModel):
     """Kılavuz danışma isteği."""
 
@@ -493,6 +526,14 @@ class GuidelineQueryRequest(BaseModel):
     kaynak_filtre: Optional[list[str]] = Field(
         default=None,
         description="Kısıtlanacak kaynaklar: ['TR2025'] veya ['EG2025'] veya None (her ikisi).",
+    )
+    gecmis: Optional[list[ConversationTurn]] = Field(
+        default=None,
+        description=(
+            "Son sohbet geçmişi (maks 3 Q/A çifti). "
+            "Preprocessor bağlam füzyonu ve QA prompt zenginleştirmesi için kullanılır. "
+            "Opsiyonel — None ise stateless davranış (geriye dönük uyumlu)."
+        ),
     )
 
 
@@ -534,19 +575,61 @@ async def guideline_query(
 
     t0 = time.time()
 
-    # Retrieval
+    # ─── Aşama 1: Sorgu Ön İşleme (Two-Stage RAG — Katman 1) ─────────────────
+    # Preprocessor: ham soruyu tıbbi terminolojiye zenginleştir.
+    # Preprocessor None ise (başlatılamadıysa) orijinal sorgu kullanılır — graceful degradation.
+    sorgu_retrieval = body.soru  # Default: orijinal sorgu
+    if rag_preprocessor is not None:
+        gecmis_turn_list = (
+            [{"soru": t.soru, "cevap": t.cevap} for t in body.gecmis]
+            if body.gecmis else []
+        )
+        try:
+            from rag.query_preprocessor import ConversationTurn as PT
+            gecmis_turns = (
+                [PT(soru=t.soru, cevap=t.cevap) for t in body.gecmis]
+                if body.gecmis else []
+            )
+            prep_result = await rag_preprocessor.preprocess(
+                soru=body.soru,
+                gecmis=gecmis_turns,
+            )
+            sorgu_retrieval = prep_result.zengin_sorgu
+            if prep_result.onisleme_yapildi:
+                import logging as _log
+                _log.getLogger(__name__).info(
+                    "[guideline-query] Sorgu zenginleştirildi (LLM=%s, %dms): %r → %r",
+                    prep_result.llm_kullanildi,
+                    prep_result.onisleme_suresi_ms,
+                    body.soru,
+                    sorgu_retrieval,
+                )
+        except Exception as prep_exc:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "[guideline-query] Preprocessor hatası: %s. Orijinal sorgu kullanılıyor.", prep_exc
+            )
+
+    # ─── Aşama 2: Retrieval (zenginleştirilmiş sorguyla) ─────────────────────
     retrieval = rag_retriever.retrieve(
-        query=body.soru,
+        query=sorgu_retrieval,          # Zengin sorgu → daha iyi ChromaDB eşleşmesi
         source_filter=body.kaynak_filtre,
     )
 
     retrieval_ms = (time.time() - t0) * 1000
 
-    # QA
+    # ─── Aşama 3: QA (orijinal sorguyla + sohbet geçmişiyle) ─────────────────
+    # Kritik tasarım kararı: QA engine'e orijinal sorgu gider.
+    # Yanıt hekimin yazdığı soruya uygun tonlanır (zenginleştirilmiş sorgu değil).
+    gecmis_dict_list = (
+        [{"soru": t.soru, "cevap": t.cevap} for t in body.gecmis]
+        if body.gecmis else None
+    )
     qa_response = rag_qa.answer(
-        soru=body.soru,
+        soru=body.soru,                 # Orijinal sorgu korunur
         retrieval=retrieval,
         islem_suresi_ms=retrieval_ms,
+        gecmis=gecmis_dict_list,        # Sohbet geçmişi → prompt zenginleştirme
     )
 
     return qa_response.to_dict()

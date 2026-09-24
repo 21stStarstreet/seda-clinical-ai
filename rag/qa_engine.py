@@ -19,7 +19,7 @@ from typing import Optional
 
 import google.generativeai as genai
 
-from rag.config import QA_MODEL, QA_TEMPERATURE, QA_MAX_OUTPUT_TOKENS
+from rag.config import QA_MODEL, QA_MODEL_FALLBACKS, QA_TEMPERATURE, QA_MAX_OUTPUT_TOKENS
 from rag.retriever import RetrievalResponse, RetrievalResult
 from config.settings import settings
 
@@ -135,6 +135,11 @@ class QAResponse:
 class QAEngine:
     """
     Bağlam + Soru → Gemini → Yapılandırılmış Klinik Cevap.
+
+    Model Fallback Zinciri:
+        429/hata durumunda QA_MODEL → QA_MODEL_FALLBACKS[0] → ... sırasıyla denenir.
+        Her model ayrı kota havuzuna sahiptir; bu sayede tek modelin kotası dolduğunda
+        sistem durmaz ve bir sonraki modelden yanıt almaya devam eder.
     """
 
     def __init__(self) -> None:
@@ -142,30 +147,51 @@ class QAEngine:
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY ayarlanmamış.")
         genai.configure(api_key=api_key)
-        self._model = genai.GenerativeModel(
-            model_name=QA_MODEL,
-            system_instruction=_SYSTEM_PROMPT,
-            generation_config=genai.GenerationConfig(
-                temperature=QA_TEMPERATURE,
-                max_output_tokens=QA_MAX_OUTPUT_TOKENS,
-                response_mime_type="application/json",
-            ),
+
+        # Tüm model listesi: birincil + fallback'ler
+        self._model_names: list[str] = [QA_MODEL] + list(QA_MODEL_FALLBACKS)
+        # Her model adı için GenerativeModel nesnesi (lazy init — ilk kullanımda oluşturulur)
+        self._models: dict[str, genai.GenerativeModel] = {}
+        logger.info(
+            "[QAEngine] Hazır. Model zinciri: %s",
+            " → ".join(self._model_names),
         )
-        logger.info("[QAEngine] Gemini %s hazır.", QA_MODEL)
+
+    def _get_model(self, model_name: str) -> genai.GenerativeModel:
+        """Model nesnesini önbellekten döndür veya oluştur."""
+        if model_name not in self._models:
+            self._models[model_name] = genai.GenerativeModel(
+                model_name=model_name,
+                system_instruction=_SYSTEM_PROMPT,
+                generation_config=genai.GenerationConfig(
+                    temperature=QA_TEMPERATURE,
+                    max_output_tokens=QA_MAX_OUTPUT_TOKENS,
+                    response_mime_type="application/json",
+                ),
+            )
+            logger.debug("[QAEngine] Model nesnesi oluşturuldu: %s", model_name)
+        return self._models[model_name]
 
     def answer(
         self,
         soru: str,
         retrieval: RetrievalResponse,
         islem_suresi_ms: float = 0.0,
+        gecmis: Optional[list[dict]] = None,
     ) -> QAResponse:
         """
         Retrieval sonuçlarını + soruyu Gemini'ye gönder, cevabı parse et.
 
+        Model Fallback Zinciri:
+            Birincil model 429 verirse bir sonraki modele geçilir.
+            Tüm modeller başarısız olursa _fallback() tetiklenir.
+
         Args:
-            soru: Hekimin sorusu.
+            soru: Hekimin sorusu (orijinal, preprocessor değiştirmez).
             retrieval: Retriever'dan gelen sonuçlar.
             islem_suresi_ms: Toplam işlem süresini doldurmak için.
+            gecmis: Son Q/A çiftleri listesi. Her öğe {"soru": str, "cevap": str}.
+                    Opsiyonel — None ise stateless davranış (mevcut gibi).
 
         Returns:
             QAResponse — cevap, kaynaklar, bulunamadı bayrağı.
@@ -182,27 +208,49 @@ class QAEngine:
                 islem_suresi_ms=islem_suresi_ms,
             )
 
-        # Kullanıcı promptunu oluştur
-        prompt = self._build_prompt(soru, retrieval)
+        # Kullanıcı promptunu oluştur (sohbet geçmişi varsa enjekte edilir)
+        prompt = self._build_prompt(soru, retrieval, gecmis=gecmis)
+
+        raw = ""
+        last_exc: Optional[Exception] = None
+
+        # ─── Model Fallback Zinciri ──────────────────────────────────────────
+        # Birincil model → fallback_1 → fallback_2 → ... sırasıyla dene.
+        # 429 (kota doldu) durumunda bir sonraki modele geç.
+        # Diğer hatalar (4xx, 5xx dışı) → aynı modelde bir kez daha dene sonra geç.
+        for model_name in self._model_names:
+            model = self._get_model(model_name)
+            try:
+                response = model.generate_content(prompt)
+                raw = response.text.strip()
+                logger.debug("[QAEngine] Yanıt alındı (model: %s, %d karakter)", model_name, len(raw))
+                last_exc = None
+                break  # Başarılı → döngüden çık
+            except Exception as ex:
+                last_exc = ex
+                err_str = str(ex)
+                is_quota = "429" in err_str or "quota" in err_str or "exhausted" in err_str
+                if is_quota:
+                    logger.warning(
+                        "[QAEngine] 429 Kota/RateLimit — model: %s. Bir sonraki modele geçiliyor...",
+                        model_name,
+                    )
+                    # Bir sonraki modele hemen geç — bekleme yok
+                    continue
+                else:
+                    logger.error("[QAEngine] Model hatası (%s): %s", model_name, ex)
+                    # Kota dışı hata — bir sonraki modele geç
+                    continue
+
+        # Tüm modeller başarısız oldu
+        if last_exc is not None:
+            logger.error("[QAEngine] Tüm modeller başarısız. Son hata: %s", last_exc)
+            return self._fallback(soru, retrieval, islem_suresi_ms)
+
+        if not raw:
+            return self._fallback(soru, retrieval, islem_suresi_ms)
 
         try:
-            # 429 kota durumunda kısa bir bekleme ve retry
-            response = None
-            for attempt in range(2):
-                try:
-                    response = self._model.generate_content(prompt)
-                    break
-                except Exception as ex:
-                    if "429" in str(ex) and attempt == 0:
-                        logger.warning("[QAEngine] Kota/RateLimit 429, 6s beklenip tekrar deneniyor...")
-                        time.sleep(6)
-                    else:
-                        raise
-
-            if response is None:
-                return self._fallback(soru, retrieval, islem_suresi_ms)
-
-            raw = response.text.strip()
             parsed = None
 
             # 1. Markdown kod bloklarını temizle (```json ... ``` veya ``` ... ```)
@@ -308,19 +356,53 @@ class QAEngine:
             logger.error("[QAEngine] JSON parse hatası: %s\nRaw: %s", exc, raw[:200])
             return self._fallback(soru, retrieval, islem_suresi_ms)
         except Exception as exc:
-            logger.error("[QAEngine] Gemini hatası: %s", exc)
+            logger.error("[QAEngine] Beklenmeyen hata: %s", exc)
             return self._fallback(soru, retrieval, islem_suresi_ms)
 
-    def _build_prompt(self, soru: str, retrieval: RetrievalResponse) -> str:
-        """Gemini'ye gönderilecek kullanıcı mesajını oluştur."""
-        return (
-            f"SORU: {soru}\n\n"
-            f"BAĞLAM (Kılavuzdan alınan ilgili bölümler):\n\n"
+    def _build_prompt(
+        self,
+        soru: str,
+        retrieval: RetrievalResponse,
+        gecmis: Optional[list[dict]] = None,
+    ) -> str:
+        """
+        Gemini'ye gönderilecek kullanıcı mesajını oluştur.
+
+        Sohbet geçmişi (gecmis) varsa prompt başına eklenir:
+            [SOHBET BAĞLAMI] bloğu → LLM önceki konuyu görür
+            [GÜNCEL SORU] → Hekimin bu turda sorduğu soru
+            [KILAVUZ BAĞLAMI] → ChromaDB'den gelen ilgili bölümler
+
+        Tasarım kararı: Gecmis olmadığında davranış mevcut ile aynı —
+        geriye dönük uyumluluk korunur.
+        """
+        parts = []
+
+        # 1. Sohbet bağlamı (varsa) — son 1 Q/A çifti yeterli
+        if gecmis:
+            son_tur = gecmis[-1]  # Sadece son tur — fazlası bağlamı bulanıklaştırır
+            onceki_soru = son_tur.get("soru", "")[:300]
+            onceki_cevap = son_tur.get("cevap", "")[:500]
+            if onceki_soru and onceki_cevap:
+                parts.append(
+                    f"[SOHBET BAĞLAMI — Bir önceki soru-cevap]\n"
+                    f"Önceki Soru: {onceki_soru}\n"
+                    f"Önceki Cevap Özeti: {onceki_cevap[:500]}\n"
+                )
+
+        # 2. Güncel soru
+        parts.append(f"GÜNCEL SORU: {soru}")
+
+        # 3. Kılavuz bağlamı
+        parts.append(
+            f"\nBAĞLAM (Kılavuzdan alınan ilgili bölümler):\n\n"
             f"{retrieval.context_text}\n\n"
             "Yukarıdaki bağlama dayanarak soruyu yanıtla. "
             "Eğer bağlamda cevap yoksa 'bulunamadi: true' döndür. "
             "SADECE JSON formatında cevap ver."
         )
+
+        return "\n\n".join(parts)
 
     def _fallback(
         self,
@@ -328,37 +410,30 @@ class QAEngine:
         retrieval: RetrievalResponse,
         islem_suresi_ms: float,
     ) -> QAResponse:
-        """Gemini başarısız olursa ham retrieval sonuçlarından basit cevap üret."""
-        if not retrieval.hits:
-            return QAResponse(
-                soru=soru,
-                cevap="Kılavuz sorgusu sırasında bir hata oluştu. Lütfen tekrar deneyin.",
-                bulunamadi=True,
-                fallback_kullanildi=True,
-                islem_suresi_ms=islem_suresi_ms,
-            )
+        """
+        Gemini başarısız olursa temiz hata mesajı döndür.
 
-        # En iyi chunk'ın metnini direkt döndür
-        best = retrieval.hits[0]
-        cevap = (
-            f"(LLM yanıt üretemedi — kılavuz metni doğrudan aktarılıyor)\n\n"
-            f"{best.text}"
-        )
-        kaynaklar = [
-            SourceReference(
-                kaynak_kodu=h.source_code,
-                display_source=h.display_source,
-                sayfa=h.doc_page,
-                bolum=h.heading,
-                alinti=h.text[:100],
-            )
-            for h in retrieval.hits[:3]
-        ]
+        Tasarım kararı:
+            Önceki davranış ham chunk metnini ekrana döküyordu. Bu iki açıdan yanlış:
+            1. Chunk konu dışıysa (ör: FTR sorgusu → topikal kortikosteroid sayfası)
+               alakasız tıbbi bilgi gösteriliyordu — klinik açıdan tehlikeli.
+            2. Fallback metni sohbet geçmişine girince sonraki sorguların
+               bağlam füzyonunu zehirliyordu.
+
+            Doğru davranış: LLM başarısız olduğunda her zaman
+            "teknik sorun, tekrar dene" mesajı ver. bulunamadi=True yap ki
+            DerleGecmis() bu turu sohbet geçmişine katmasın (hedef).
+        """
+        logger.warning("[QAEngine] Gemini fallback — soru: %r, hit sayısı: %d", soru, len(retrieval.hits))
         return QAResponse(
             soru=soru,
-            cevap=cevap,
-            kaynaklar=kaynaklar,
-            bulunamadi=False,
+            cevap=(
+                "Kılavuz sorgusu şu an yanıt üretemedi. "
+                "Lütfen birkaç saniye bekleyip sorunuzu tekrar sorun. "
+                "Sorun devam ederse soruyu farklı bir ifadeyle yeniden deneyebilirsiniz."
+            ),
+            kaynaklar=[],       # Alakasız chunk referansları gösterilmez
+            bulunamadi=True,    # DerleGecmis() bu turu geçmişe katmayacak
             fallback_kullanildi=True,
             islem_suresi_ms=islem_suresi_ms,
         )

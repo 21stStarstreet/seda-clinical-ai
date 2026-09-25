@@ -70,3 +70,9 @@ cdss_web/obj/
 
 #agents
 .agents/
+
+# SDK / IDE Telemetry & Artifacts
+Library/
+**/Library/
+.local/
+**/.local/

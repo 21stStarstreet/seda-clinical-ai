@@ -32,50 +32,17 @@
                 <div class="rag-active-slider" id="ragActiveSlider"></div>
                 <button type="button" class="rag-pill-btn @(_kaynakFiltre == null ? "active" : "")"
                         @onclick="() => SetKaynakFiltre(null)">
-                    Tümü
+                    <span class="rag-pill-label">Tümü</span>
                 </button>
                 <button type="button" class="rag-pill-btn @(_kaynakFiltre?.Contains("TR2025") == true ? "active" : "")"
                         @onclick='() => SetKaynakFiltre(new List<string>{"TR2025"})'>
-                    🇹🇷 TR2025 (PSOKİD)
+                    <span class="rag-pill-label">🇹🇷 TR2025 (PSOKİD)</span>
                 </button>
                 <button type="button" class="rag-pill-btn @(_kaynakFiltre?.Contains("EG2025") == true ? "active" : "")"
                         @onclick='() => SetKaynakFiltre(new List<string>{"EG2025"})'>
-                    🇪🇺 EuroGuiDerm
+                    <span class="rag-pill-label">🇪🇺 EuroGuiDerm</span>
                 </button>
             </div>
-            <!-- Sıvı Cam Optik Kırılma Filtresi (Liquid Glass SVG Displacement) -->
-            <svg aria-hidden="true" style="position: absolute; width: 1px; height: 1px; left: -9999px; top: -9999px; opacity: 0.01; pointer-events: none;">
-                <defs>
-                    <filter id="liquidGlassRefract" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
-                        <!-- Saf Prizmatik Renk Dağılımı (Düzensiz şekil bozulması YOK, sadece prizma renk ayrışması) -->
-                        <!-- Kırmızı kanal izole et -->
-                        <feColorMatrix in="SourceGraphic" type="matrix"
-                            values="1 0 0 0 0
-                                    0 0 0 0 0
-                                    0 0 0 0 0
-                                    0 0 0 1 0" result="rCh"/>
-                        <!-- Yeşil kanal izole et -->
-                        <feColorMatrix in="SourceGraphic" type="matrix"
-                            values="0 0 0 0 0
-                                    0 1 0 0 0
-                                    0 0 0 0 0
-                                    0 0 0 1 0" result="gCh"/>
-                        <!-- Mavi kanal izole et -->
-                        <feColorMatrix in="SourceGraphic" type="matrix"
-                            values="0 0 0 0 0
-                                    0 0 0 0 0
-                                    0 0 1 0 0
-                                    0 0 0 1 0" result="bCh"/>
-                        <!-- Kanal ofsetleri: Kırmızı → sola, Mavi → sağa (Lateral Chromatic Aberration) -->
-                        <feOffset id="caRedOffset"   in="rCh" dx="0" dy="0" result="rShifted"/>
-                        <feOffset id="caGreenOffset" in="gCh" dx="0" dy="0" result="gShifted"/>
-                        <feOffset id="caBlueOffset"  in="bCh" dx="0" dy="0" result="bShifted"/>
-                        <!-- Screen blend ile RGB kanalları yeniden birleştir -->
-                        <feBlend in="rShifted" in2="gShifted" mode="screen" result="rgMerged"/>
-                        <feBlend in="rgMerged" in2="bShifted" mode="screen"/>
-                    </filter>
-                </defs>
-            </svg>
         </div>
     </header>
 

@@ -381,14 +381,19 @@
                     <!-- Segmented Switcher (Özet / Detaylı) -->
                     @if (!string.IsNullOrWhiteSpace(_result.LlmOzet))
                     {
-                        <div class="llm-segmented-switcher">
-                            <button type="button" class="segment-btn @(_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(true)">
-                                <i class="ph-bold ph-lightning"></i>
-                                <span>Hızlı Karar</span>
+                        <div class="rag-segmented-track llm-segmented-switcher" id="llmSegmentedTrack">
+                            <div class="rag-active-slider" id="llmActiveSlider"></div>
+                            <button type="button" class="rag-pill-btn segment-btn @(_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(true)">
+                                <span class="rag-pill-label">
+                                    <i class="ph-bold ph-lightning"></i>
+                                    <span>Hızlı Karar</span>
+                                </span>
                             </button>
-                            <button type="button" class="segment-btn @(!_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(false)">
-                                <i class="ph-bold ph-article"></i>
-                                <span>Detaylı Epikriz</span>
+                            <button type="button" class="rag-pill-btn segment-btn @(!_ozetGoster ? "active" : "")" @onclick="() => SetOzetGoster(false)">
+                                <span class="rag-pill-label">
+                                    <i class="ph-bold ph-article"></i>
+                                    <span>Detaylı Epikriz</span>
+                                </span>
                             </button>
                         </div>
                     }
@@ -518,6 +523,11 @@
         _ozetGoster = ozet;
         StateHasChanged();
         await JS.InvokeVoidAsync("animateHeightTransition", "llmBoxPanel", 350);
+        try
+        {
+            await JS.InvokeVoidAsync("updateSegmentedSlider", "llmSegmentedTrack", "llmActiveSlider");
+        }
+        catch { }
     }
 
     private async Task CopyEpikrizToClipboard()
@@ -631,9 +641,20 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        _doktorAdi = state.User.Identity?.Name ?? "Bilinmeyen Hekim";
+        if (firstRender)
+        {
+            var state = await AuthStateProvider.GetAuthenticationStateAsync();
+            _doktorAdi = state.User.Identity?.Name ?? "Bilinmeyen Hekim";
+        }
+
+        if (_showResult && !string.IsNullOrWhiteSpace(_result?.LlmOzet))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("initSegmentedSlider", "llmSegmentedTrack", "llmActiveSlider");
+            }
+            catch { }
+        }
     }
 
     private void OnDogumTarihiChanged(ChangeEventArgs e)

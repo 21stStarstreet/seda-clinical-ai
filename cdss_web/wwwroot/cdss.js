@@ -156,22 +156,30 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         window.updateSegmentedSlider(trackId, sliderId);
         return;
     }
+
+    const buttons = Array.from(track.querySelectorAll('.rag-pill-btn, .segment-btn'));
+    if (!buttons.length) return;
     track._sliderInitialized = true;
 
-    const buttons = Array.from(track.querySelectorAll('.rag-pill-btn'));
-    if (!buttons.length) return;
-
-    // SVG Cam Prizması: Renk Dağılımı (Lateral Chromatic Aberration) elemanları
-    const caRedOffset  = document.getElementById('caRedOffset');
-    const caBlueOffset = document.getElementById('caBlueOffset');
-    let refractPulseFrame = null;
-
-    // Prizmatik renk dağılımı şiddetini ayarla (dx: kırmızı sola, mavi sağa)
-    function setChromaticOffset(dx) {
-        const v = Math.max(0, dx);
-        if (caRedOffset)  caRedOffset.setAttribute('dx',  (-v).toFixed(2));
-        if (caBlueOffset) caBlueOffset.setAttribute('dx',  v.toFixed(2));
+    // Önbellek: Buton geometrisi (Layout Thrashing'i önlemek için bir kez ölçülür)
+    let buttonMetrics = [];
+    function measureMetrics() {
+        buttonMetrics = buttons.map(b => {
+            const left = b.offsetLeft;
+            const width = b.offsetWidth;
+            return {
+                btn: b,
+                label: b.querySelector('.rag-pill-label') || b.querySelector('span') || b,
+                left: left,
+                width: width,
+                right: left + width,
+                center: left + width / 2
+            };
+        });
     }
+    measureMetrics();
+
+    let transitionTimer = null;
 
     function enableRefract() {
         slider.classList.add('has-refract');
@@ -179,29 +187,12 @@ window.initSegmentedSlider = function (trackId, sliderId) {
 
     function disableRefract() {
         slider.classList.remove('has-refract');
-        setChromaticOffset(0);
-    }
-
-    // Geçişlerde ve bırakıldığında sinüzoidal prizmatik renk pulsu (şekil bozulması olmadan saf renk kırılması)
-    function triggerRefractionPulse(peakCA = 3.0, durationMs = 380) {
-        if (refractPulseFrame) cancelAnimationFrame(refractPulseFrame);
-        enableRefract();
-        const startTime = performance.now();
-
-        function tick(now) {
-            const elapsed  = now - startTime;
-            const progress = Math.min(1, elapsed / durationMs);
-            const wave     = Math.sin(progress * Math.PI);  // sinus: 0→1→0
-            setChromaticOffset(peakCA * wave);
-
-            if (progress < 1) {
-                refractPulseFrame = requestAnimationFrame(tick);
-            } else {
-                disableRefract();
-                refractPulseFrame = null;
+        buttonMetrics.forEach(m => {
+            if (m.label) {
+                m.label.classList.remove('is-refracting');
             }
-        }
-        refractPulseFrame = requestAnimationFrame(tick);
+            m.btn.classList.remove('is-illuminated');
+        });
     }
 
     let isDragging = false;
@@ -213,40 +204,62 @@ window.initSegmentedSlider = function (trackId, sliderId) {
     let lastX = 0;
     let lastTime = 0;
     let velocityX = 0;
-
     let currentScale = 1.0;
 
     function getActiveButton() {
-        return track.querySelector('.rag-pill-btn.active') || buttons[0];
+        return track.querySelector('.rag-pill-btn.active, .segment-btn.active') || buttons[0];
     }
 
-    function updateSpecularPosition(clientX, clientY) {
-        const rect = slider.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        const xPercent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-        const yPercent = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-        slider.style.setProperty('--pointer-x', `${xPercent.toFixed(1)}%`);
-        slider.style.setProperty('--pointer-y', `${yPercent.toFixed(1)}%`);
-    }
-
+    // Ultra Pürüzsüz Donanım Hızlandırmalı Geçiş (Zero Jank 120 FPS)
     function moveSliderToButton(btn, animate = true) {
         if (!btn) return;
-        const targetLeft = btn.offsetLeft;
-        const targetWidth = btn.offsetWidth;
+        measureMetrics();
+        const m = buttonMetrics.find(x => x.btn === btn) || {
+            left: btn.offsetLeft,
+            width: btn.offsetWidth
+        };
+
+        const targetLeft = m.left;
+        const targetWidth = m.width;
+
+        if (targetWidth === 0) {
+            requestAnimationFrame(() => {
+                const retryBtn = getActiveButton();
+                if (retryBtn) moveSliderToButton(retryBtn, false);
+            });
+            return;
+        }
+
         const isMovingRight = targetLeft > currentSliderLeft;
         const moveDist = Math.abs(targetLeft - currentSliderLeft);
 
-        if (animate) {
-            // Eşzamanlı ultra akıcı geçiş: X konumu, genişlik ve saf prizmatik renk kırılması
-            slider.style.transition = 'transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), width 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
-            
-            if (moveDist > 10) {
-                slider.style.transformOrigin = isMovingRight ? 'left center' : 'right center';
-                triggerRefractionPulse(3.0, 380);
-                setTimeout(() => {
-                    slider.style.transformOrigin = 'center center';
-                }, 350);
-            }
+        if (transitionTimer) {
+            clearTimeout(transitionTimer);
+            transitionTimer = null;
+        }
+
+        if (animate && moveDist > 5) {
+            slider.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease';
+            slider.style.transformOrigin = isMovingRight ? 'left center' : 'right center';
+
+            // Yol üstündeki butonları tespit et: SADECE su kırılması dalgasını aktif et
+            enableRefract();
+            const minX = Math.min(currentSliderLeft, targetLeft);
+            const maxX = Math.max(currentSliderLeft + slider.offsetWidth, targetLeft + targetWidth);
+
+            buttonMetrics.forEach(item => {
+                const inPath = item.right >= minX && item.left <= maxX;
+                if (inPath && item.label) {
+                    item.label.classList.add('is-refracting');
+                }
+            });
+
+            // Geçiş tamamlandığında pürüzsüzce kapat
+            transitionTimer = setTimeout(() => {
+                disableRefract();
+                slider.style.transformOrigin = 'center center';
+                transitionTimer = null;
+            }, 350);
         } else {
             slider.style.transition = 'none';
             slider.style.transformOrigin = 'center center';
@@ -263,19 +276,24 @@ window.initSegmentedSlider = function (trackId, sliderId) {
 
     track._moveSliderToButton = moveSliderToButton;
 
-    // İlk konumlandırma - Durgun halde tamamen pürüzsüz
-    setTimeout(() => {
+    // İlk konumlandırma - Durgun halde tamamen pürüzsüz (Multi-Frame Settling)
+    const doInitialPosition = () => {
         const activeBtn = getActiveButton();
-        moveSliderToButton(activeBtn, false);
-        slider.style.setProperty('--pointer-x', '50%');
-        slider.style.setProperty('--pointer-y', '50%');
-        disableRefract();
-    }, 40);
+        if (activeBtn) {
+            moveSliderToButton(activeBtn, false);
+            disableRefract();
+        }
+    };
+    requestAnimationFrame(doInitialPosition);
+    setTimeout(doInitialPosition, 40);
+    setTimeout(doInitialPosition, 120);
+
+    let isProgrammaticClick = false;
 
     // Her butona tıklandığında oraya kaysın
     buttons.forEach((btn) => {
         btn.addEventListener('click', (e) => {
-            if (hasDragged) {
+            if (hasDragged && !isProgrammaticClick) {
                 e.stopPropagation();
                 return;
             }
@@ -285,24 +303,14 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         });
     });
 
-    // ─── Hover Işık Takibi (Specular Response) ───────────────────────
-    track.addEventListener('pointermove', (e) => {
-        if (!isDragging) {
-            updateSpecularPosition(e.clientX, e.clientY);
-        }
-    }, { passive: true });
+    // ─── Liquid Glass Sürükleme, Büyüme & Kırılma Fiziği (rAF Throttled) ───
+    let rafMoveId = null;
+    let pendingEvent = null;
 
-    track.addEventListener('pointerleave', () => {
-        if (!isDragging) {
-            slider.style.setProperty('--pointer-x', '50%');
-            slider.style.setProperty('--pointer-y', '50%');
-        }
-    });
-
-    // ─── Liquid Glass Sürükleme, Büyüme & Kırılma Fiziği ──────────────
     function onPointerDown(e) {
         if (e.button !== undefined && e.button !== 0) return;
 
+        measureMetrics();
         isDragging = true;
         isPressed = true;
         hasDragged = false;
@@ -311,9 +319,9 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         lastTime = performance.now();
         velocityX = 0;
 
-        if (refractPulseFrame) {
-            cancelAnimationFrame(refractPulseFrame);
-            refractPulseFrame = null;
+        if (transitionTimer) {
+            clearTimeout(transitionTimer);
+            transitionTimer = null;
         }
 
         // Anlık transform pozisyonunu oku
@@ -335,18 +343,17 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         slider.classList.add('is-pressed');
 
         enableRefract();
-        // Basılma anında hafif elastik sıkışma
         currentScale = 0.98;
         slider.style.transformOrigin = 'center center';
         slider.style.borderRadius = '10px';
         slider.style.transform = `translateX(${currentSliderLeft}px) scale(${currentScale})`;
-        setChromaticOffset(1.5);
-        updateSpecularPosition(e.clientX, e.clientY);
     }
 
-    function onPointerMove(e) {
-        if (!isDragging) return;
+    function processDragUpdate() {
+        rafMoveId = null;
+        if (!isDragging || !pendingEvent) return;
 
+        const e = pendingEvent;
         const now = performance.now();
         const dt = Math.max(1, now - lastTime);
         const dx = e.clientX - lastX;
@@ -357,18 +364,17 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         const deltaX = e.clientX - startPointerX;
         if (Math.abs(deltaX) > 3) {
             hasDragged = true;
+            buttons.forEach(b => b.classList.remove('active'));
         }
 
         if (!hasDragged) {
-            updateSpecularPosition(e.clientX, e.clientY);
             return;
         }
 
         enableRefract();
 
-        const minLeft = buttons[0].offsetLeft;
-        const lastBtn = buttons[buttons.length - 1];
-        const maxLeft = lastBtn.offsetLeft;
+        const minLeft = buttonMetrics[0].left;
+        const maxLeft = buttonMetrics[buttonMetrics.length - 1].left;
 
         let newLeft = startSliderLeft + deltaX;
 
@@ -384,13 +390,12 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         // Sürüklerken butonu akıcı animasyonla büyüt (%16 büyüme)
         currentScale += (1.16 - currentScale) * 0.28;
 
-        // Hareket yönüne ve hızına bağlı sadece o yöne doğru lateral sıkışma (Directional Squish)
+        // Hareket yönüne ve hızına bağlı sadece o yöne doğru lateral sıkışma
         const speed = Math.abs(velocityX);
-        const squish = Math.min(speed * 0.012, 0.14);
+        const squish = Math.min(speed * 0.01, 0.12);
         const scaleX = currentScale * (1 - squish);
         const scaleY = currentScale;
 
-        // Sadece hareket ettiği yöne doğru sıkışması için transformOrigin (Kenarlar daima pürüzsüz 10px):
         if (velocityX > 0.4) {
             slider.style.transformOrigin = 'left center';
         } else if (velocityX < -0.4) {
@@ -401,19 +406,14 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         slider.style.borderRadius = '10px';
         slider.style.transform = `translateX(${newLeft}px) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`;
 
-        // Hıza duyarlı saf prizmatik renk kırılması (Chromatic Aberration - Düzensiz şekil bozulması YOK)
-        const dynamicCA = Math.min(1.2 + speed * 0.35, 4.0);
-        setChromaticOffset(dynamicCA);
-
-        // Continuous Smoothstep Width Morphing:
-        // Her iki buton arasındaki genişliği mesafe oranına göre pürüzsüzce enterpole et (Sıfır sert sıçrama!)
-        let targetWidth = buttons[0].offsetWidth;
-        if (buttons.length >= 2) {
-            for (let i = 0; i < buttons.length - 1; i++) {
-                const bLeft = buttons[i].offsetLeft;
-                const nextLeft = buttons[i + 1].offsetLeft;
-                const bWidth = buttons[i].offsetWidth;
-                const nextWidth = buttons[i + 1].offsetWidth;
+        // Continuous Smoothstep Width Morphing (Önbellek kullanarak sıfır reflow):
+        let targetWidth = buttonMetrics[0].width;
+        if (buttonMetrics.length >= 2) {
+            for (let i = 0; i < buttonMetrics.length - 1; i++) {
+                const bLeft = buttonMetrics[i].left;
+                const nextLeft = buttonMetrics[i + 1].left;
+                const bWidth = buttonMetrics[i].width;
+                const nextWidth = buttonMetrics[i + 1].width;
 
                 if (newLeft <= bLeft) {
                     targetWidth = bWidth;
@@ -422,7 +422,6 @@ window.initSegmentedSlider = function (trackId, sliderId) {
                     targetWidth = nextWidth;
                 } else {
                     const progress = Math.max(0, Math.min(1, (newLeft - bLeft) / (nextLeft - bLeft)));
-                    // Smoothstep eğrisi (3x^2 - 2x^3) ile ipeksi sıvı cam morflaması
                     const smoothProgress = progress * progress * (3 - 2 * progress);
                     targetWidth = bWidth + (nextWidth - bWidth) * smoothProgress;
                     break;
@@ -432,13 +431,59 @@ window.initSegmentedSlider = function (trackId, sliderId) {
 
         slider.style.width = `${targetWidth.toFixed(1)}px`;
 
-        updateSpecularPosition(e.clientX, e.clientY);
+        // Buton altı su kırılması & kaydırma esnasında üzerine gelindiğinde parlama
+        const sliderLeft = newLeft;
+        const sliderRight = newLeft + targetWidth;
+        const sliderCenter = newLeft + (targetWidth / 2);
+
+        // Merceğin altındaki tek butonu tespit et (En yüksek temas / merkez kontrolü)
+        let hoveredItem = null;
+        let maxOverlap = 0;
+
+        buttonMetrics.forEach(item => {
+            const overlap = Math.max(0, Math.min(sliderRight, item.right) - Math.max(sliderLeft, item.left));
+            if (overlap > maxOverlap) {
+                maxOverlap = overlap;
+                hoveredItem = item;
+            }
+
+            // Su kırılması: Belli bir temas olduğunda aktif
+            if (item.label) {
+                if (overlap > 8) {
+                    item.label.classList.add('is-refracting');
+                } else {
+                    item.label.classList.remove('is-refracting');
+                }
+            }
+        });
+
+        // SADECE ve SADECE merceğin tam üstünde olduğu buton açık beyaz olsun, diğerleri mat kalsın
+        buttonMetrics.forEach(item => {
+            if (item === hoveredItem && maxOverlap > (item.width * 0.35)) {
+                item.btn.classList.add('is-illuminated');
+            } else {
+                item.btn.classList.remove('is-illuminated');
+            }
+        });
+    }
+
+    function onPointerMove(e) {
+        if (!isDragging) return;
+        pendingEvent = e;
+        if (!rafMoveId) {
+            rafMoveId = requestAnimationFrame(processDragUpdate);
+        }
     }
 
     function onPointerUp(e) {
         if (!isDragging) return;
         isDragging = false;
         isPressed = false;
+
+        if (rafMoveId) {
+            cancelAnimationFrame(rafMoveId);
+            rafMoveId = null;
+        }
 
         track.classList.remove('is-dragging');
         slider.classList.remove('is-pressed');
@@ -450,44 +495,45 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         } catch (err) { }
 
         if (!hasDragged) {
-            // Tıklama olduysa, yay animasyonuyla sıkışmayı serbest bırak
-            slider.style.transition = 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.12), width 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.12)';
+            slider.style.transition = 'transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.12), width 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.12)';
             slider.style.transform = `translateX(${currentSliderLeft}px) scale(1)`;
-            triggerRefractionPulse(4.0, 2.0, 220);
+            setTimeout(() => disableRefract(), 200);
             return;
         }
 
         // Bırakılan konuma en yakın butonu tespit et (Manyetik Hedef)
         const sliderCenter = currentSliderLeft + (slider.offsetWidth / 2);
-        let targetBtn = buttons[0];
+        let targetBtn = buttonMetrics[0].btn;
         let minDistance = Infinity;
 
-        buttons.forEach(btn => {
-            const btnCenter = btn.offsetLeft + (btn.offsetWidth / 2);
-            const dist = Math.abs(sliderCenter - btnCenter);
+        buttonMetrics.forEach(item => {
+            const dist = Math.abs(sliderCenter - item.center);
             if (dist < minDistance) {
                 minDistance = dist;
-                targetBtn = btn;
+                targetBtn = item.btn;
             }
         });
+
+        // Tüm geçici parlama sınıflarını anında temizle ve SADECE hedefi aktif yap
+        buttons.forEach(b => {
+            b.classList.remove('is-illuminated');
+            b.classList.remove('active');
+        });
+        targetBtn.classList.add('active');
 
         // Organik yay ile hedefe oturt (Spring Back & Snap)
         moveSliderToButton(targetBtn, true);
 
         // Blazor aktif durumunu güncelle
-        const wasActive = targetBtn.classList.contains('active');
-        buttons.forEach(b => b.classList.remove('active'));
-        targetBtn.classList.add('active');
-
-        if (!wasActive) {
+        if (hasDragged) {
+            isProgrammaticClick = true;
             targetBtn.click();
+            isProgrammaticClick = false;
         }
 
         setTimeout(() => {
             hasDragged = false;
-            slider.style.setProperty('--pointer-x', '50%');
-            slider.style.setProperty('--pointer-y', '50%');
-        }, 90);
+        }, 80);
     }
 
     track.addEventListener('pointerdown', onPointerDown);
@@ -496,6 +542,7 @@ window.initSegmentedSlider = function (trackId, sliderId) {
     track.addEventListener('pointercancel', onPointerUp);
 
     window.addEventListener('resize', () => {
+        measureMetrics();
         const activeBtn = getActiveButton();
         moveSliderToButton(activeBtn, false);
     });
@@ -505,8 +552,9 @@ window.updateSegmentedSlider = function (trackId, sliderId) {
     const track = document.getElementById(trackId);
     const slider = document.getElementById(sliderId);
     if (!track || !slider) return;
+    if (track.classList.contains('is-dragging')) return;
 
-    const activeBtn = track.querySelector('.rag-pill-btn.active');
+    const activeBtn = track.querySelector('.rag-pill-btn.active, .segment-btn.active');
     if (activeBtn) {
         if (typeof track._moveSliderToButton === 'function') {
             track._moveSliderToButton(activeBtn, true);

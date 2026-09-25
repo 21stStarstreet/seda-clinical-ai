@@ -873,20 +873,26 @@
     color: #0D9488;
 }
 
-[data-theme="light"] .llm-segmented-switcher {
-    background: #E2E8F0;
-    border: 1px solid #CBD5E1;
+[data-theme="light"] .llm-segmented-switcher.rag-segmented-track {
+    background: rgba(226, 232, 240, 0.65);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .segment-btn {
+[data-theme="light"] .llm-segmented-switcher .segment-btn {
     color: #475569;
 }
 
-[data-theme="light"] .segment-btn.active {
-    background: #FFFFFF;
-    color: #0F766E;
-    border: 1px solid rgba(13, 148, 136, 0.35);
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+[data-theme="light"] .llm-segmented-switcher .segment-btn:hover {
+    color: #0f172a;
+}
+
+[data-theme="light"] .llm-segmented-switcher .segment-btn.active,
+[data-theme="light"] .llm-segmented-switcher .segment-btn.is-illuminated {
+    color: #0f172a !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 [data-theme="light"] .btn-copy-epicrisis {
@@ -2069,43 +2075,45 @@ select.form-input {
     margin-left: auto;
 }
 
-/* Segmented View Switcher (Özet / Detaylı) */
+/* Segmented View Switcher (Hızlı Karar / Detaylı Epikriz Liquid Glass Slider) */
 .llm-segmented-switcher {
-    display: inline-flex;
-    background: rgba(0, 0, 0, 0.35);
-    padding: 3px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 0;
 }
 
-.segment-btn {
+.llm-segmented-switcher .segment-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 13px;
-    border-radius: 7px;
+    padding: 6px 14px;
+    border-radius: 10px;
     border: none;
     background: transparent;
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 0.18s ease, text-shadow 0.18s ease;
+    white-space: nowrap;
+    outline: none;
+    user-select: none;
     font-family: inherit;
 }
 
-.segment-btn:hover {
-    color: var(--text-primary);
+.llm-segmented-switcher .segment-btn:hover {
+    color: #f1f5f9;
 }
 
-.segment-btn.active {
-    background: linear-gradient(135deg, rgba(20, 184, 166, 0.3), rgba(13, 148, 136, 0.2));
-    color: #ffffff;
-    border: 1px solid rgba(20, 184, 166, 0.5);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.llm-segmented-switcher .segment-btn.active,
+.llm-segmented-switcher .segment-btn.is-illuminated {
+    color: #ffffff !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-.segment-btn i {
+.llm-segmented-switcher .segment-btn i {
     font-size: 14px;
 }
 
@@ -3689,8 +3697,8 @@ select.form-input {
     display: inline-flex;
     align-items: center;
     background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
     padding: 3px;
     border-radius: 13px;
     border: 0.5px solid rgba(255, 255, 255, 0.07);
@@ -3702,6 +3710,9 @@ select.form-input {
     -webkit-user-select: none;
     touch-action: none;
     cursor: pointer;
+    /* GPU İzolasyonu: Yeniden çizimleri (reflow) kapsülleme */
+    contain: paint layout;
+    isolation: isolate;
 }
 
 .rag-segmented-track.is-dragging {
@@ -3719,14 +3730,14 @@ select.form-input {
     
     /* Layer 1: Kristal Berraklığında Transparan Cam Gövdesi */
     background: 
-        linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.025) 100%),
-        rgba(13, 148, 136, 0.05);
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0.03) 100%),
+        rgba(13, 148, 136, 0.06);
     
-    /* Layer 2: Yüksek İndeksli Optik Kırılma ve Doygunluk */
-    backdrop-filter: blur(24px) saturate(210%) contrast(110%) brightness(106%);
-    -webkit-backdrop-filter: blur(24px) saturate(210%) contrast(110%) brightness(106%);
+    /* Layer 2: Optimize Edilmiş Optik Kırılma (16px GPU-friendly blur) */
+    backdrop-filter: blur(16px) saturate(200%) contrast(108%) brightness(105%);
+    -webkit-backdrop-filter: blur(16px) saturate(200%) contrast(108%) brightness(105%);
     
-    /* Layer 3: Sıvı Cam SVG Optik Kırılması (Durgun halde pürüzsüz 'none', hareket/basılma anında aktif) */
+    /* Layer 3: Sıvı Cam SVG Optik Kırılması (Durgun halde 'none', geçiş anında aktif) */
     filter: none;
     -webkit-filter: none;
     
@@ -3744,26 +3755,25 @@ select.form-input {
     z-index: 1;
     opacity: 0;
     transform-origin: center center;
-    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), width 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, border-radius 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: transform, width, border-radius;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease;
+    will-change: transform, width;
+    contain: paint layout;
 }
 
-/* Layer 5: İmleci Takip Eden Kostik Işık Pırıltısı (Caustic Specular) */
+/* Layer 5: Sabit Işık Pırıltısı (Static Specular Highlight - İmleçten Bağımsız Sabit) */
 .rag-active-slider::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     background: radial-gradient(
-        circle 80px at var(--pointer-x, 50%) var(--pointer-y, 50%),
-        rgba(255, 255, 255, 0.22) 0%,
-        rgba(255, 255, 255, 0.04) 40%,
-        rgba(56, 189, 248, 0.02) 65%,
+        ellipse 80% 65% at 50% 15%,
+        rgba(255, 255, 255, 0.20) 0%,
+        rgba(255, 255, 255, 0.04) 45%,
         transparent 80%
     );
     pointer-events: none;
     opacity: 0.9;
-    transition: opacity 0.2s ease;
 }
 
 /* Layer 6: İnceltilmiş Üst Tepe Işık Çizgisi (Ultra-Fine Crest Flare) */
@@ -3829,7 +3839,7 @@ select.form-input {
     font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: color 0.2s ease, transform 0.15s ease;
+    transition: color 0.18s ease, text-shadow 0.18s ease;
     white-space: nowrap;
     outline: none;
     user-select: none;
@@ -3839,13 +3849,41 @@ select.form-input {
     color: #f1f5f9;
 }
 
-.rag-pill-btn.active {
-    color: #ffffff;
+/* Seçili Buton & Kaydırma Sırasında Üzerine Gelinen Buton (Saf Açık Beyaz) */
+.rag-pill-btn.active,
+.rag-pill-btn.is-illuminated {
+    color: #ffffff !important;
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
+}
+
+.rag-pill-btn.active .rag-pill-label,
+.rag-pill-btn.is-illuminated .rag-pill-label {
+    color: #ffffff;
+}
+
+/* Buton İçeriği & Su Altı Kırılma Efekti (Underwater Water Refraction - GPU Accelerated) */
+.rag-pill-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+    pointer-events: none;
+    transform-origin: center center;
+    transition: color 0.18s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), filter 0.18s ease;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.rag-pill-label.is-refracting {
+    filter: url(#waterRefractUnder);
+    -webkit-filter: url(#waterRefractUnder);
+    transform: scale(1.04) translateY(-0.5px);
 }
 
 /* Accessibility: Reduced Motion */
@@ -3871,8 +3909,9 @@ select.form-input {
     color: #0f172a;
 }
 
-[data-theme="light"] .rag-pill-btn.active {
-    color: #0f172a;
+[data-theme="light"] .rag-pill-btn.active,
+[data-theme="light"] .rag-pill-btn.is-illuminated {
+    color: #0f172a !important;
     text-shadow: none;
 }
 

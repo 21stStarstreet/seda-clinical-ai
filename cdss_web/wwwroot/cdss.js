@@ -210,19 +210,23 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         return track.querySelector('.rag-pill-btn.active, .segment-btn.active') || buttons[0];
     }
 
-    // Ultra Pürüzsüz Donanım Hızlandırmalı Geçiş (Zero Jank 120 FPS)
-    function moveSliderToButton(btn, animate = true) {
-        if (!btn) return;
+    let rafFlightId = null;
+
+    // ─── Tıklama Uçuş Fiziği: Sürükleme Animasyonuyla Hedef Butona Akıcı Geçiş ───
+    function animateSliderFlight(targetBtn, onComplete) {
+        if (!targetBtn) return;
         measureMetrics();
-        const m = buttonMetrics.find(x => x.btn === btn) || {
-            left: btn.offsetLeft,
-            width: btn.offsetWidth
+
+        const m = buttonMetrics.find(x => x.btn === targetBtn) || {
+            left: targetBtn.offsetLeft,
+            width: targetBtn.offsetWidth
         };
 
-        const targetLeft = m.left;
-        const targetWidth = m.width;
+        const opticalBleed = 2;
+        const targetLeft = m.left - opticalBleed;
+        const targetWidth = m.width + (opticalBleed * 2);
 
-        if (targetWidth === 0) {
+        if (targetWidth <= 0 || m.width === 0) {
             requestAnimationFrame(() => {
                 const retryBtn = getActiveButton();
                 if (retryBtn) moveSliderToButton(retryBtn, false);
@@ -230,48 +234,186 @@ window.initSegmentedSlider = function (trackId, sliderId) {
             return;
         }
 
-        const isMovingRight = targetLeft > currentSliderLeft;
-        const moveDist = Math.abs(targetLeft - currentSliderLeft);
+        // Anlık pozisyon ve genişliği oku (hareket halindeyken tıklandıysa oradan başlasın)
+        let startLeft = currentSliderLeft;
+        let startWidth = slider.offsetWidth || targetWidth;
 
+        const matrix = window.getComputedStyle(slider).transform;
+        if (matrix && matrix !== 'none') {
+            const values = matrix.split('(')[1].split(')')[0].split(',');
+            const curX = parseFloat(values[4]);
+            if (!isNaN(curX)) {
+                startLeft = curX;
+            }
+        }
+
+        const distance = targetLeft - startLeft;
+        if (Math.abs(distance) < 0.5 && Math.abs(targetWidth - startWidth) < 0.5) {
+            slider.style.transform = `translateX(${targetLeft.toFixed(1)}px) scale(1) skewX(0deg)`;
+            slider.style.width = `${targetWidth.toFixed(1)}px`;
+            if (typeof onComplete === 'function') onComplete();
+            return;
+        }
+
+        if (rafFlightId) {
+            cancelAnimationFrame(rafFlightId);
+            rafFlightId = null;
+        }
         if (transitionTimer) {
             clearTimeout(transitionTimer);
             transitionTimer = null;
         }
 
-        if (animate && moveDist > 5) {
-            slider.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease';
-            slider.style.transformOrigin = isMovingRight ? 'left center' : 'right center';
+        track._isAnimating = true;
+        slider.style.transition = 'none';
+        track.classList.add('is-dragging');
+        slider.classList.add('is-pressed');
+        enableRefract();
 
-            // Yol üstündeki butonları tespit et: SADECE su kırılması dalgasını aktif et
-            enableRefract();
-            const minX = Math.min(currentSliderLeft, targetLeft);
-            const maxX = Math.max(currentSliderLeft + slider.offsetWidth, targetLeft + targetWidth);
+        const dir = distance >= 0 ? 1 : -1;
+        const distAbs = Math.abs(distance);
+        // Dinamik uçuş süresi (mesafeye göre 340ms - 440ms arası)
+        const duration = Math.min(440, Math.max(340, 310 + distAbs * 0.35));
+        const startTime = performance.now();
+
+        function step(now) {
+            const elapsed = now - startTime;
+            const p = Math.min(1, elapsed / duration);
+
+            // Apple Quintic Ease-Out ile liftoff & magnetic cushion
+            const ease = 1 - Math.pow(1 - p, 3.6) * (1 - p * 0.15);
+
+            const curX = startLeft + distance * ease;
+            const curW = startWidth + (targetWidth - startWidth) * ease;
+            currentSliderLeft = curX;
+
+            // Sürükleme benzeri 3D sıvı kabarcık genleşmesi (Mid-flight %16 büyüme)
+            const arc = Math.sin(p * Math.PI);
+            const scale = 1.0 + (arc * 0.16);
+
+            // Hıza ve yöne bağlı lateral uzama ve basılma (Squish & Stretch)
+            const stretch = 1.0 + (arc * 0.10);
+            const squash = 1.0 / stretch;
+            const scaleX = scale * stretch;
+            const scaleY = scale * squash;
+
+            // Uçuş yönüne doğru dinamik 3D eğilme (Tilt)
+            const skewDeg = -dir * arc * 2.8;
+
+            slider.style.transformOrigin = 'center center';
+            slider.style.borderRadius = '11px';
+            slider.style.transform = `translateX(${curX.toFixed(1)}px) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)}) skewX(${skewDeg.toFixed(2)}deg)`;
+            slider.style.width = `${curW.toFixed(1)}px`;
+
+            // Yol üstündeki butonları tespit et: Su kırılması ve anlık parıldama
+            const sLeft = curX;
+            const sRight = curX + curW;
+
+            let hoveredItem = null;
+            let maxOverlap = 0;
 
             buttonMetrics.forEach(item => {
-                const inPath = item.right >= minX && item.left <= maxX;
-                if (inPath && item.label) {
-                    item.label.classList.add('is-refracting');
+                const overlap = Math.max(0, Math.min(sRight, item.right) - Math.max(sLeft, item.left));
+                if (overlap > maxOverlap) {
+                    maxOverlap = overlap;
+                    hoveredItem = item;
+                }
+
+                if (item.label) {
+                    if (overlap > 8) {
+                        item.label.classList.add('is-refracting');
+                    } else if (item.btn !== targetBtn) {
+                        item.label.classList.remove('is-refracting');
+                    }
                 }
             });
 
-            // Geçiş tamamlandığında pürüzsüzce kapat
-            transitionTimer = setTimeout(() => {
-                disableRefract();
-                slider.style.transformOrigin = 'center center';
-                transitionTimer = null;
-            }, 350);
-        } else {
-            slider.style.transition = 'none';
-            slider.style.transformOrigin = 'center center';
-            disableRefract();
+            // Merceğin altından geçen buton anlık açık beyaz parıldasın
+            buttonMetrics.forEach(item => {
+                if (item === hoveredItem && maxOverlap > (item.width * 0.35)) {
+                    item.btn.classList.add('is-illuminated');
+                } else if (item.btn !== targetBtn) {
+                    item.btn.classList.remove('is-illuminated');
+                }
+            });
+
+            if (p < 1) {
+                rafFlightId = requestAnimationFrame(step);
+            } else {
+                rafFlightId = null;
+                // Uçuş tamamlandı: Hedefe pürüzsüzce otur ve yay animasyonuyla sakinleş
+                const springTransition = 'transform 0.44s cubic-bezier(0.19, 1.35, 0.32, 1), width 0.44s cubic-bezier(0.19, 1.35, 0.32, 1), opacity 0.20s ease, box-shadow 0.44s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.44s ease';
+                slider.style.transition = springTransition;
+                slider.classList.add('is-releasing');
+                slider.classList.remove('is-pressed');
+                track.classList.remove('is-dragging');
+
+                slider.style.transform = `translateX(${targetLeft.toFixed(1)}px) scale(1) skewX(0deg)`;
+                slider.style.width = `${targetWidth.toFixed(1)}px`;
+                currentSliderLeft = targetLeft;
+
+                // Hedef butonu aktif yap, diğerlerinin geçici sınıflarını temizle
+                buttons.forEach(b => {
+                    b.classList.remove('is-illuminated');
+                    b.classList.remove('active');
+                });
+                targetBtn.classList.add('active');
+
+                transitionTimer = setTimeout(() => {
+                    slider.classList.remove('is-releasing');
+                    disableRefract();
+                    track._isAnimating = false;
+                    transitionTimer = null;
+                }, 380);
+
+                if (typeof onComplete === 'function') {
+                    onComplete();
+                }
+            }
         }
 
-        slider.style.borderRadius = '10px';
-        currentScale = 1.0;
-        slider.style.transform = `translateX(${targetLeft}px) scale(1)`;
-        slider.style.width = `${targetWidth}px`;
-        slider.style.opacity = '1';
-        currentSliderLeft = targetLeft;
+        rafFlightId = requestAnimationFrame(step);
+    }
+
+    // Ultra Pürüzsüz Donanım Hızlandırmalı Geçiş (Zero Jank 120 FPS)
+    function moveSliderToButton(btn, animate = true) {
+        if (!btn) return;
+        if (animate) {
+            animateSliderFlight(btn);
+        } else {
+            if (rafFlightId) {
+                cancelAnimationFrame(rafFlightId);
+                rafFlightId = null;
+            }
+            if (transitionTimer) {
+                clearTimeout(transitionTimer);
+                transitionTimer = null;
+            }
+            measureMetrics();
+            const m = buttonMetrics.find(x => x.btn === btn) || {
+                left: btn.offsetLeft,
+                width: btn.offsetWidth
+            };
+
+            const opticalBleed = 2;
+            const targetLeft = m.left - opticalBleed;
+            const targetWidth = m.width + (opticalBleed * 2);
+
+            slider.style.transition = 'none';
+            slider.style.transformOrigin = 'center center';
+            slider.classList.remove('is-releasing');
+            slider.classList.remove('is-overshooting');
+            slider.classList.remove('is-pressed');
+            track.classList.remove('is-dragging');
+            disableRefract();
+
+            slider.style.borderRadius = '11px';
+            currentScale = 1.0;
+            slider.style.transform = `translateX(${targetLeft.toFixed(1)}px) scale(1) skewX(0deg)`;
+            slider.style.width = `${targetWidth.toFixed(1)}px`;
+            slider.style.opacity = '1';
+            currentSliderLeft = targetLeft;
+        }
     }
 
     track._moveSliderToButton = moveSliderToButton;
@@ -289,17 +431,59 @@ window.initSegmentedSlider = function (trackId, sliderId) {
     setTimeout(doInitialPosition, 120);
 
     let isProgrammaticClick = false;
+    let lastHandledTime = 0;
+    let lastHandledBtn = null;
+    let pointerDownBtn = null;
+    let pointerCapturedId = null;
 
-    // Her butona tıklandığında oraya kaysın
+    function handleButtonClick(btn, triggerBlazor = true) {
+        if (!btn) return;
+
+        const currentActive = getActiveButton();
+
+        // Zaten aktif olan butona tıklandıysa:
+        if (btn === currentActive && !hasDragged) {
+            // Zarif mikroskobik dokunsal geri tepme (tactile micro-rebound)
+            slider.style.transition = 'transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s ease';
+            slider.style.transform = `translateX(${currentSliderLeft.toFixed(1)}px) scale(0.96)`;
+            setTimeout(() => {
+                slider.style.transition = 'transform 0.36s cubic-bezier(0.19, 1.35, 0.32, 1), box-shadow 0.36s ease';
+                slider.style.transform = `translateX(${currentSliderLeft.toFixed(1)}px) scale(1)`;
+            }, 100);
+            return;
+        }
+
+        const now = performance.now();
+        if (now - lastHandledTime < 150 && lastHandledBtn === btn) {
+            return;
+        }
+        lastHandledTime = now;
+        lastHandledBtn = btn;
+
+        // Sıvı cam merceği tam sürükleme uçuş fiziğiyle hedef butona kaydır!
+        moveSliderToButton(btn, true);
+
+        // Blazor C# olayını tetikle (@onclick)
+        if (triggerBlazor) {
+            isProgrammaticClick = true;
+            try {
+                btn.click();
+            } catch (err) { }
+            isProgrammaticClick = false;
+        }
+    }
+
+    // Her butona tıklandığında (klavye, erişilebilirlik veya standart tıklama)
     buttons.forEach((btn) => {
         btn.addEventListener('click', (e) => {
             if (hasDragged && !isProgrammaticClick) {
                 e.stopPropagation();
                 return;
             }
-            buttons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            moveSliderToButton(btn, true);
+            if (isProgrammaticClick) {
+                return;
+            }
+            handleButtonClick(btn, false);
         });
     });
 
@@ -311,14 +495,21 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         if (e.button !== undefined && e.button !== 0) return;
 
         measureMetrics();
-        isDragging = true;
         isPressed = true;
+        isDragging = false;
         hasDragged = false;
         startPointerX = e.clientX;
+        startPointerY = e.clientY;
         lastX = e.clientX;
         lastTime = performance.now();
         velocityX = 0;
 
+        pointerDownBtn = e.target.closest('.rag-pill-btn, .segment-btn');
+
+        if (rafFlightId) {
+            cancelAnimationFrame(rafFlightId);
+            rafFlightId = null;
+        }
         if (transitionTimer) {
             clearTimeout(transitionTimer);
             transitionTimer = null;
@@ -333,20 +524,6 @@ window.initSegmentedSlider = function (trackId, sliderId) {
             startSliderLeft = slider.offsetLeft;
         }
         currentSliderLeft = startSliderLeft;
-
-        try {
-            track.setPointerCapture(e.pointerId);
-        } catch (err) { }
-
-        slider.style.transition = 'none';
-        track.classList.add('is-dragging');
-        slider.classList.add('is-pressed');
-
-        enableRefract();
-        currentScale = 0.98;
-        slider.style.transformOrigin = 'center center';
-        slider.style.borderRadius = '10px';
-        slider.style.transform = `translateX(${currentSliderLeft}px) scale(${currentScale})`;
     }
 
     function processDragUpdate() {
@@ -373,16 +550,25 @@ window.initSegmentedSlider = function (trackId, sliderId) {
 
         enableRefract();
 
-        const minLeft = buttonMetrics[0].left;
-        const maxLeft = buttonMetrics[buttonMetrics.length - 1].left;
+        const opticalBleed = 2;
+        const minLeft = buttonMetrics[0].left - opticalBleed;
+        const maxLeft = buttonMetrics[buttonMetrics.length - 1].left - opticalBleed;
 
-        let newLeft = startSliderLeft + deltaX;
+        let rawLeft = startSliderLeft + deltaX;
+        let newLeft = rawLeft;
+        let overshoot = 0;
+        const maxOvershoot = 44; // Buton kapsamlarının dışına taşma kapasitesi (px)
+        const pullResistance = 110; // Doğal sıvı gerilim direnci
 
-        // Uç sınırlarda elastik esneme (rubber-banding)
-        if (newLeft < minLeft) {
-            newLeft = minLeft + (newLeft - minLeft) * 0.22;
-        } else if (newLeft > maxLeft) {
-            newLeft = maxLeft + (newLeft - maxLeft) * 0.22;
+        // Buton sınırlarının dışına çıkıldığında fiziksel sıvı gerilimi (Nonlinear Rubber-Banding)
+        if (rawLeft < minLeft) {
+            const pullDist = minLeft - rawLeft;
+            overshoot = -maxOvershoot * (1 - Math.exp(-pullDist / pullResistance));
+            newLeft = minLeft + overshoot;
+        } else if (rawLeft > maxLeft) {
+            const pullDist = rawLeft - maxLeft;
+            overshoot = maxOvershoot * (1 - Math.exp(-pullDist / pullResistance));
+            newLeft = maxLeft + overshoot;
         }
 
         currentSliderLeft = newLeft;
@@ -390,30 +576,39 @@ window.initSegmentedSlider = function (trackId, sliderId) {
         // Sürüklerken butonu akıcı animasyonla büyüt (%16 büyüme)
         currentScale += (1.16 - currentScale) * 0.28;
 
-        // Hareket yönüne ve hızına bağlı sadece o yöne doğru lateral sıkışma
+        // Hareket yönüne ve hızına bağlı lateral sıkışma
         const speed = Math.abs(velocityX);
         const squish = Math.min(speed * 0.01, 0.12);
-        const scaleX = currentScale * (1 - squish);
-        const scaleY = currentScale;
 
-        if (velocityX > 0.4) {
-            slider.style.transformOrigin = 'left center';
-        } else if (velocityX < -0.4) {
-            slider.style.transformOrigin = 'right center';
+        // Sınır aşımı (Overshoot) esnasında yüzey gerilimi deformasyonu:
+        const tensionRatio = Math.min(1, Math.abs(overshoot) / maxOvershoot);
+        if (tensionRatio > 0.05) {
+            slider.classList.add('is-overshooting');
         } else {
-            slider.style.transformOrigin = 'center center';
+            slider.classList.remove('is-overshooting');
         }
-        slider.style.borderRadius = '10px';
-        slider.style.transform = `translateX(${newLeft}px) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`;
+
+        // Çekilme yönünde uzama (stretch) ve hacim koruma (squash):
+        const stretchX = 1 + (tensionRatio * 0.20);
+        const squashY = 1 - (tensionRatio * 0.10);
+        const scaleX = currentScale * (1 - squish) * stretchX;
+        const scaleY = currentScale * squashY;
+
+        // Gerilme yönüne doğru dinamik 3D eğilme (tilt):
+        const skewDeg = (overshoot > 0 ? -1 : 1) * tensionRatio * 3.5;
+
+        slider.style.transformOrigin = 'center center';
+        slider.style.borderRadius = '11px';
+        slider.style.transform = `translateX(${newLeft.toFixed(1)}px) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)}) skewX(${skewDeg.toFixed(2)}deg)`;
 
         // Continuous Smoothstep Width Morphing (Önbellek kullanarak sıfır reflow):
-        let targetWidth = buttonMetrics[0].width;
+        let targetWidth = buttonMetrics[0].width + (opticalBleed * 2);
         if (buttonMetrics.length >= 2) {
             for (let i = 0; i < buttonMetrics.length - 1; i++) {
-                const bLeft = buttonMetrics[i].left;
-                const nextLeft = buttonMetrics[i + 1].left;
-                const bWidth = buttonMetrics[i].width;
-                const nextWidth = buttonMetrics[i + 1].width;
+                const bLeft = buttonMetrics[i].left - opticalBleed;
+                const nextLeft = buttonMetrics[i + 1].left - opticalBleed;
+                const bWidth = buttonMetrics[i].width + (opticalBleed * 2);
+                const nextWidth = buttonMetrics[i + 1].width + (opticalBleed * 2);
 
                 if (newLeft <= bLeft) {
                     targetWidth = bWidth;
@@ -468,38 +663,86 @@ window.initSegmentedSlider = function (trackId, sliderId) {
     }
 
     function onPointerMove(e) {
-        if (!isDragging) return;
-        pendingEvent = e;
-        if (!rafMoveId) {
-            rafMoveId = requestAnimationFrame(processDragUpdate);
+        if (!isPressed) return;
+
+        const deltaX = e.clientX - startPointerX;
+
+        // Kullanıcı henüz sürüklemediyse, sürükleme eşiğini (threshold: 4px) kontrol et
+        if (!hasDragged && Math.abs(deltaX) > 4) {
+            hasDragged = true;
+            isDragging = true;
+
+            // Sürükleme başladığı anda pointer capture al
+            try {
+                track.setPointerCapture(e.pointerId);
+                pointerCapturedId = e.pointerId;
+            } catch (err) { }
+
+            slider.style.transition = 'none';
+            track.classList.add('is-dragging');
+            slider.classList.add('is-pressed');
+            enableRefract();
+            buttons.forEach(b => b.classList.remove('active'));
+        }
+
+        if (isDragging) {
+            pendingEvent = e;
+            if (!rafMoveId) {
+                rafMoveId = requestAnimationFrame(processDragUpdate);
+            }
         }
     }
 
     function onPointerUp(e) {
-        if (!isDragging) return;
-        isDragging = false;
+        if (!isPressed && !isDragging) return;
+
+        const wasDragging = isDragging || hasDragged;
         isPressed = false;
+        isDragging = false;
 
         if (rafMoveId) {
             cancelAnimationFrame(rafMoveId);
             rafMoveId = null;
         }
 
-        track.classList.remove('is-dragging');
-        slider.classList.remove('is-pressed');
-        slider.style.borderRadius = '10px';
-        slider.style.transformOrigin = 'center center';
+        if (pointerCapturedId !== null) {
+            try {
+                track.releasePointerCapture(pointerCapturedId);
+            } catch (err) { }
+            pointerCapturedId = null;
+        }
 
-        try {
-            track.releasePointerCapture(e.pointerId);
-        } catch (err) { }
+        // ─── SENARYO A: BUTONA BASILMA (CLICK / TAP) ───
+        if (!wasDragging) {
+            let clickedBtn = e.target.closest('.rag-pill-btn, .segment-btn') || pointerDownBtn;
+            if (!clickedBtn) {
+                // Eğer track kenar boşluğuna tıklandıysa, tıklanan X koordinatına en yakın butona git
+                let minD = Infinity;
+                buttonMetrics.forEach(item => {
+                    const d = Math.abs(e.clientX - item.btn.getBoundingClientRect().left - (item.width / 2));
+                    if (d < minD) {
+                        minD = d;
+                        clickedBtn = item.btn;
+                    }
+                });
+            }
 
-        if (!hasDragged) {
-            slider.style.transition = 'transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.12), width 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.12)';
-            slider.style.transform = `translateX(${currentSliderLeft}px) scale(1)`;
-            setTimeout(() => disableRefract(), 200);
+            if (clickedBtn) {
+                handleButtonClick(clickedBtn, true);
+            }
             return;
         }
+
+        // ─── SENARYO B: SÜRÜKLEME SONRASI BIRAKILMA (DRAG RELEASE) ───
+        const springTransition = 'transform 0.48s cubic-bezier(0.19, 1.35, 0.32, 1), width 0.48s cubic-bezier(0.19, 1.35, 0.32, 1), opacity 0.20s ease, box-shadow 0.48s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.48s ease';
+        slider.style.transition = springTransition;
+        slider.classList.add('is-releasing');
+        slider.style.borderRadius = '11px';
+        slider.style.transformOrigin = 'center center';
+
+        track.classList.remove('is-dragging');
+        slider.classList.remove('is-pressed');
+        slider.classList.remove('is-overshooting');
 
         // Bırakılan konuma en yakın butonu tespit et (Manyetik Hedef)
         const sliderCenter = currentSliderLeft + (slider.offsetWidth / 2);
@@ -514,26 +757,11 @@ window.initSegmentedSlider = function (trackId, sliderId) {
             }
         });
 
-        // Tüm geçici parlama sınıflarını anında temizle ve SADECE hedefi aktif yap
-        buttons.forEach(b => {
-            b.classList.remove('is-illuminated');
-            b.classList.remove('active');
-        });
-        targetBtn.classList.add('active');
-
-        // Organik yay ile hedefe oturt (Spring Back & Snap)
-        moveSliderToButton(targetBtn, true);
-
-        // Blazor aktif durumunu güncelle
-        if (hasDragged) {
-            isProgrammaticClick = true;
-            targetBtn.click();
-            isProgrammaticClick = false;
-        }
+        handleButtonClick(targetBtn, true);
 
         setTimeout(() => {
             hasDragged = false;
-        }, 80);
+        }, 120);
     }
 
     track.addEventListener('pointerdown', onPointerDown);
@@ -553,17 +781,19 @@ window.updateSegmentedSlider = function (trackId, sliderId) {
     const slider = document.getElementById(sliderId);
     if (!track || !slider) return;
     if (track.classList.contains('is-dragging')) return;
+    if (track._isAnimating) return;
 
     const activeBtn = track.querySelector('.rag-pill-btn.active, .segment-btn.active');
     if (activeBtn) {
         if (typeof track._moveSliderToButton === 'function') {
             track._moveSliderToButton(activeBtn, true);
         } else {
-            const targetLeft = activeBtn.offsetLeft;
-            const targetWidth = activeBtn.offsetWidth;
-            slider.style.transition = 'transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), width 0.42s cubic-bezier(0.16, 1, 0.3, 1)';
-            slider.style.transform = `translateX(${targetLeft}px) scale(1)`;
-            slider.style.width = `${targetWidth}px`;
+            const opticalBleed = 2;
+            const targetLeft = activeBtn.offsetLeft - opticalBleed;
+            const targetWidth = activeBtn.offsetWidth + (opticalBleed * 2);
+            slider.style.transition = 'transform 0.48s cubic-bezier(0.19, 1.35, 0.32, 1), width 0.48s cubic-bezier(0.19, 1.35, 0.32, 1), opacity 0.20s ease, box-shadow 0.48s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.48s ease';
+            slider.style.transform = `translateX(${targetLeft.toFixed(1)}px) scale(1) skewX(0deg)`;
+            slider.style.width = `${targetWidth.toFixed(1)}px`;
             slider.style.opacity = '1';
         }
     }

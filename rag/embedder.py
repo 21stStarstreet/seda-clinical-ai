@@ -88,8 +88,9 @@ class Embedder:
         """
         Tek sorgu embedding'i üret (retrieval için).
         RETRIEVAL_QUERY task type kullanılır — indexlemeden farklı.
+        Kullanıcı arayüzünde hızlı yanıt için max_retries=2 ve kısa timeout kullanılır.
         """
-        vectors = self._embed_with_retry([text], task_type=TASK_TYPE_QUERY)
+        vectors = self._embed_with_retry([text], task_type=TASK_TYPE_QUERY, max_retries=2, is_interactive=True)
         return vectors[0]
 
     def _embed_with_retry(
@@ -97,12 +98,16 @@ class Embedder:
         texts: list[str],
         task_type: str,
         max_retries: int = 8,
+        is_interactive: bool = False,
     ) -> list[list[float]]:
         """
         Üstel ve kota duyarlı bekleme ile retry mantığı.
         429 Rate limit veya geçici API hatalarında adaptif bekler.
+        is_interactive=True ise (kullanıcı aramaları) bekleme süresi maks 2s ile sınırlanır.
         """
         import re
+
+        timeout = 6.0 if is_interactive else 30.0
 
         for attempt in range(max_retries):
             try:
@@ -110,6 +115,7 @@ class Embedder:
                     model=self._model,
                     content=texts,
                     task_type=task_type,
+                    request_options={"timeout": timeout},
                 )
                 embeddings = result.get("embedding", [])
 
@@ -123,7 +129,9 @@ class Embedder:
                 err_str = str(exc).lower()
                 is_quota = "429" in err_str or "quota" in err_str or "exhausted" in err_str
 
-                if is_quota:
+                if is_interactive:
+                    wait = 1.0 + (attempt * 1.0)  # 1s, 2s
+                elif is_quota:
                     # Hata mesajında "retry in X.Xs" varsa yakala
                     retry_match = re.search(r"retry\s+in\s+([\d\.]+)\s*s", err_str)
                     if retry_match:
@@ -135,10 +143,10 @@ class Embedder:
                     wait = 2.0 ** attempt
 
                 if attempt < max_retries - 1:
-                    print(
-                        f"\n  ⚠️ [Embedder] API uyarısı ({'Kota/RateLimit 429' if is_quota else 'Hata'}), "
-                        f"{wait:.1f}s beklenip tekrar denenecek (deneme {attempt + 1}/{max_retries})...",
-                        flush=True,
+                    logger.warning(
+                        "[Embedder] API uyarısı (%s), %.1fs beklenip tekrar denenecek (deneme %d/%d)...",
+                        'Kota/RateLimit 429' if is_quota else 'Hata',
+                        wait, attempt + 1, max_retries,
                     )
                     time.sleep(wait)
                 else:

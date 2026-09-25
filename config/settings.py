@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     # ─── LLM ──────────────────────────────────────────────────────
     gemini_api_key: str = Field(default="", description="Gemini API anahtarı")
-    llm_model: str = Field(default="gemini-3.6-flash", description="Gemini LLM model adı")
+    llm_model: str = Field(default="gemini-3.1-flash-lite-preview", description="Gemini LLM model adı")
     llm_enabled: bool = Field(default=True)
     llm_temperature: float = Field(default=0.1)
     llm_max_tokens: int = Field(default=4000)  # Detaylı epikriz (3 karar × paragraf) + özet için yeterli bütçe

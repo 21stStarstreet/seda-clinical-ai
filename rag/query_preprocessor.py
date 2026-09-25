@@ -37,7 +37,7 @@ from typing import Optional
 
 import google.generativeai as genai
 
-from rag.config import PREPROCESSOR_MODEL, PREPROCESSOR_MAX_TOKENS
+from rag.config import PREPROCESSOR_MODEL, PREPROCESSOR_MAX_TOKENS, PREPROCESSOR_TIMEOUT_SEC
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -127,8 +127,99 @@ _MEDICAL_TERM_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# ─── Klinik Dışı Girdi Tespiti ────────────────────────────────────────────────
+# Bu regex'ler anlamlı alfanümerik Türkçe/İngilizce kelime içermeyen veya
+# açıkça klinik bağlamla ilgisiz girdileri yakalar.
+# Amaç: Preprocessor'dan ÖNCE filtrele — LLM'e asla ulaşmasın.
+
+# Yalnızca tekrarlayan karakter grupları: "haha", "ahahah", "hehehe", "hı hı", "ahahaha"
+_LAUGHTER_PATTERN = re.compile(
+    r"^[\s!?.]*(?:(?:a*h+a*)+|(?:he)+|(?:hı)+|hee+|hey|hi+|ho+|(?:ah)+|eh+|ih+|öh+|uh+|hihi|hehe)+[\s!?.]*$",
+    re.IGNORECASE | re.UNICODE,
+)
+
+# Yalnızca noktalama, boşluk, emoji gibi içerik: "!!!", "???", "...", ":)", ":D"
+_PUNCTUATION_ONLY_PATTERN = re.compile(
+    r"^[^\w\u00C0-\u024F\u0100-\u024F\u011E\u011F\u015E\u015F\u0130\u0131\u00D6\u00F6\u00DC\u00FC\u00C7\u00E7]{1,}$",
+    re.UNICODE,
+)
+
+# Anlamlı en az 3 karakter uzunluğunda kelime içermiyor mu?
+_MIN_WORD_LENGTH = 3  # Bu uzunluktan kısa tüm kelimeleri içeren girdi reddedilir
+_MIN_REAL_WORD_COUNT = 1  # En az 1 adet ≥3 karakter Türkçe/Latin kelime beklenir
+
+# ─── Genel Klinik Anahtar Kelime Tabanı ──────────────────────────────────────
+# Tıbbi olmayan ama klinik bağlam içeren genel Türkçe kelimeler
+_GENERAL_CLINICAL_WORDS = frozenset({
+    "tedavi", "hastalık", "hasta", "doktor", "hekim", "ilaç", "kılavuz",
+    "sevk", "muayene", "tanı", "belirtisi", "semptom", "sonuç", "rapor",
+    "takip", "kontrol", "doz", "başlanır", "başlanmalı", "verilir", "önerilir",
+    "tarama", "test", "laboratuvar", "kan", "değer", "düzey", "yüksek", "düşük",
+    "artrit", "eklem", "deri", "cilt", "lezyon", "plak", "yama", "ağrı",
+    "kaşıntı", "yangı", "enfeksiyon", "yan etki", "risk", "kriter",
+})
+
+# Tek başına klinik bağlamı olmayan sosyal/gündelik kelimeler
+_SOCIAL_ONLY_WORDS: frozenset[str] = frozenset({
+    "merhaba", "selam", "günaydın", "iyi", "akşamlar", "geceler",
+    "tamam", "tamamdır", "harika", "süper", "bravo",
+    "teşekkür", "teşekkürler", "sağol", "eyvallah", "evet", "hayır",
+    "nope", "yep", "ok", "okay", "cool", "nice", "wow",
+    "lol", "omg", "xd",
+})
+
+
+def _is_non_clinical_input(soru: str) -> bool:
+    """
+    Girdinin klinik bir soru olup olmadığını hızlıca kontrol et.
+
+    Klinik OLMAYAN girdi örnekleri: "Haha!", "!!!", "ok", "tamam", ":D", "hehe"
+    Klinik girdi örnekleri: "pasi nedir?", "tamam da ftr ne zaman?", "ok ama metotreksat dozu?"
+
+    Mantık:
+        1. Gülen/anlamsız ses taklitleri → klinik değil
+        2. Sadece noktalama → klinik değil
+        3. 3+ karakterli en az 1 gerçek kelime yoksa → klinik değil
+        4. Sohbet geçmişi bağlamında bile tek başına anlamsız → LLM'e bırakmadan filtrele
+    """
+    soru_stripped = soru.strip()
+
+    # 1. Tamamen boş veya çok kısa
+    if len(soru_stripped) < 2:
+        return True
+
+    # 2. Gülen ses taklidleri: haha, hehe, hıhı, ahahah vb.
+    if _LAUGHTER_PATTERN.match(soru_stripped):
+        return True
+
+    # 3. Sadece noktalama/sembol
+    if _PUNCTUATION_ONLY_PATTERN.match(soru_stripped):
+        return True
+
+    # 4. En az 1 adet ≥3 karakter gerçek kelime var mı?
+    # (Türkçe harf karakterleri dahil)
+    words = re.findall(r"[a-zA-ZğüşıöçĞÜŞİÖÇ]{3,}", soru_stripped, re.UNICODE)
+    if len(words) < _MIN_REAL_WORD_COUNT:
+        return True
+
+    # 5. Tek kelimeli sosyal ifadeler: "merhaba", "tamam", "teşekkür", "selam" vb.
+    # Bu kelimeler tek başına hiçbir zaman klinik soru olamaz.
+    # NOT: Birden fazla kelime içeriyorsa (ör: "tamam da ftr?") bu kontrolü atlıyoruz —
+    # o durumda bağlam füzyonu LLM'e bırakılır.
+    words_lower = {w.lower() for w in words}
+    # Tek kelimeli girdi VE bu kelime sosyal listede → reddet
+    if len(words) == 1 and words_lower.issubset(_SOCIAL_ONLY_WORDS):
+        return True
+
+    return False
+
+# ─── LLM Sentinel Sabiti ──────────────────────────────────────────────────────
+# LLM bu değeri döndürürse preprocessor klinik_degil=True flag'ini ayarlar.
+# Blacklist'e değil, LLM'in anlama kapasitesine dayanan ölçeklenebilir yaklaşım.
+_NON_CLINICAL_SENTINEL = "__KLINIK_DEGIL__"
+
 # ─── LLM Reformülasyon Sistem Promptu ────────────────────────────────────────
-_REWRITE_SYSTEM_PROMPT = """Sen bir tıbbi sorgu optimizasyon asistanısın. Görrevin kısa veya konuşma dili
+_REWRITE_SYSTEM_PROMPT = """Sen bir tıbbi sorgu optimizasyon asistanısın. Görevin kısa veya konuşma dili
 ile yazılmış klinik soruları, klinik kılavuz metinleriyle daha iyi eşleşmesi için
 akademik Türkçe tıbbi terminolojiye çevirmek.
 
@@ -139,7 +230,28 @@ KURALLAR:
 4. Önceki konu bağlamı verildiyse (BAĞLAM: satırı), soruyu o konuyla ilişkilendir.
 5. SADECE yeniden yazılmış sorguyu döndür — başka hiçbir şey yazma.
 6. Maksimum 2 cümle.
-7. Türkçe yaz."""
+7. Türkçe yaz.
+
+KRİTİK KURAL — KLİNİK OLMAYAN GİRDİ TESPİTİ:
+Eğer SORGU aşağıdaki kategorilerden birine giriyorsa, YALNIZCA şu metni yaz:
+__KLINIK_DEGIL__
+(Hiçbir şey reformüle etme, hiçbir açıklama ekleme — sadece bu sentinel değeri.)
+
+Klinik OLMAYAN kategoriler:
+- Gülme/ses taklidi: "haha", "hehe", "hahahahaha", "ahahaha", "hı hı"
+- Anlamsız klavye girdisi: "asdfgh", "qwerty", "12345"
+- Selamlama/veda: "merhaba", "günaydın", "iyi günler", "görüşürüz"
+- Teşekkür/onay/red: "teşekkür", "sağol", "tamam", "evet", "hayır", "bravo"
+- Duygusal/sosyal ifade: "süper", "harika", "mükemmel", "dur", "bilmiyorum", "ne bileyim"
+- Soru formatında olsa bile klinik içerik YOKSA: "nasılsın?", "ne zaman gelirsin?"
+- Sadece noktalama veya emoji
+
+Klinik OLAN kategoriler (bunları reformüle et):
+- Hastalık, belirti, tanı sorguları: "pasi nedir", "deri döküntüsü"
+- Tedavi, ilaç, doz sorguları: "metotreksat başlanır mı", "biyolojik ne zaman"
+- Kılavuz referansları: "sevk kriterleri", "takip aralığı"
+- Bağlam gerektiren devam soruları: "peki bu hastada ne yapmalı", "o zaman dozu?"
+  (önceki konu tıbbi ise bu da tıbbi kabul edilir)"""
 
 
 # ─── Veri Yapısı ─────────────────────────────────────────────────────────────
@@ -159,6 +271,7 @@ class PreprocessResult:
     onisleme_yapildi: bool     # Değişiklik yapıldı mı?
     llm_kullanildi: bool       # LLM çağrısı yapıldı mı?
     onisleme_suresi_ms: float  # Preprocessor işlem süresi
+    klinik_degil: bool = False # True ise girdi klinik soru değil → pipeline durdurulmalı
 
 
 # ─── Preprocessor ────────────────────────────────────────────────────────────
@@ -218,11 +331,29 @@ class QueryPreprocessor:
 
         Returns:
             PreprocessResult — zengin sorgu + meta bilgiler.
+            NOT: klinik_degil=True ise caller pipeline'ı durdurmalı.
         """
         import time
         t0 = time.perf_counter()
 
         gecmis = gecmis or []
+
+        # Adım 0: Klinik dışı girdi erken tespiti (0ms, her zaman çalışır)
+        # Bu adım LLM'den önce gelir — anlamsız girdi LLM'e hiç ulaşmaz.
+        if _is_non_clinical_input(soru):
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+            logger.info(
+                "[Preprocessor] Klinik dışı girdi tespit edildi, pipeline durduruldu: %r",
+                soru,
+            )
+            return PreprocessResult(
+                zengin_sorgu=soru,
+                orijinal_sorgu=soru,
+                onisleme_yapildi=False,
+                llm_kullanildi=False,
+                onisleme_suresi_ms=round(elapsed_ms, 1),
+                klinik_degil=True,
+            )
 
         # Adım 1: Kural tabanlı kısaltma genişletme (0ms, her zaman çalışır)
         kisaltma_genisletilmis = self._expand_abbreviations(soru)
@@ -245,6 +376,22 @@ class QueryPreprocessor:
                     soru=kisaltma_genisletilmis,
                     onceki_konu=onceki_konu,
                 )
+                # ── Sentinel kontrolü: LLM klinik olmadığını işaret etti mi? ──
+                if llm_sonucu and _NON_CLINICAL_SENTINEL in llm_sonucu:
+                    elapsed_ms = (time.perf_counter() - t0) * 1000
+                    logger.info(
+                        "[Preprocessor] LLM sentinel tespiti → klinik dışı girdi: %r",
+                        soru,
+                    )
+                    return PreprocessResult(
+                        zengin_sorgu=soru,
+                        orijinal_sorgu=soru,
+                        onisleme_yapildi=False,
+                        llm_kullanildi=False,
+                        onisleme_suresi_ms=round(elapsed_ms, 1),
+                        klinik_degil=True,
+                    )
+                # ── Normal reformülasyon ──────────────────────────────────────
                 if llm_sonucu and len(llm_sonucu) >= 10:
                     zengin_sorgu = llm_sonucu
                     llm_kullanildi = True
@@ -264,6 +411,7 @@ class QueryPreprocessor:
             onisleme_yapildi=abbreviations_changed or llm_kullanildi,
             llm_kullanildi=llm_kullanildi,
             onisleme_suresi_ms=round(elapsed_ms, 1),
+            klinik_degil=False,
         )
 
     # ─── Yardımcı Metodlar ────────────────────────────────────────────────────
@@ -359,6 +507,9 @@ class QueryPreprocessor:
         prompt_parts.append(f"SORGU: {soru}")
         prompt = "\n".join(prompt_parts)
 
-        # generate_content_async → FastAPI coroutine'i bloklamaz
-        response = await self._model.generate_content_async(prompt)
+        # generate_content_async → FastAPI coroutine'i bloklamaz (sert zaman aşımı ile)
+        response = await self._model.generate_content_async(
+            prompt,
+            request_options={"timeout": PREPROCESSOR_TIMEOUT_SEC},
+        )
         return response.text.strip()

@@ -298,31 +298,48 @@ class LLMExplainer:
         api_key: str = "",
         enabled: bool = True,
         temperature: float = 0.1,
-        max_tokens: int = 2000,
-        model_name: str = "gemini-3.6-flash",
+        max_tokens: int = 4000,
+        model_name: str = "gemini-3.1-flash-lite-preview",
     ):
         self.enabled = enabled and bool(api_key)
-        self._model = None
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self._models: dict[str, Any] = {}
+
+        # Fallback model listesi (sıralı deneme zinciri)
+        raw_models = [model_name, "gemini-3.1-flash-lite", "gemini-3-flash-preview"]
+        self._model_names: list[str] = []
+        for m in raw_models:
+            if m and m not in self._model_names:
+                self._model_names.append(m)
 
         if self.enabled:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                self._model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=SYSTEM_PROMPT,
-                    generation_config=genai.GenerationConfig(
-                        temperature=temperature,
-                        top_p=0.9,
-                        max_output_tokens=max_tokens,
-                    ),
-                )
-                print(f"[LLM] Gemini {model_name} bağlantısı hazır.")
+                # İlk modeli hemen ısıt
+                self._get_model(self._model_names[0])
+                print(f"[LLM] Gemini {self._model_names[0]} bağlantısı hazır (zincir: {' → '.join(self._model_names)}).")
             except Exception as e:
                 print(f"[LLM] Bağlantı kurulamadı: {e}. Fallback modu aktif.")
                 self.enabled = False
         else:
             print("[LLM] Devre dışı. Fallback template kullanılacak.")
+
+    def _get_model(self, m_name: str):
+        """Model nesnesini lazy initialize et."""
+        if m_name not in self._models:
+            import google.generativeai as genai
+            self._models[m_name] = genai.GenerativeModel(
+                model_name=m_name,
+                system_instruction=SYSTEM_PROMPT,
+                generation_config=genai.GenerationConfig(
+                    temperature=self.temperature,
+                    top_p=0.9,
+                    max_output_tokens=self.max_tokens,
+                ),
+            )
+        return self._models[m_name]
 
     def explain(
         self,
@@ -368,7 +385,7 @@ class LLMExplainer:
         )
         kilavuz_atiflar = guidelines_kb.format_citations_for_api(secilen_atiflar)
 
-        if not self.enabled or self._model is None:
+        if not self.enabled or not self._model_names:
             return build_fallback_explanation(prediction), "", True, kilavuz_atiflar
 
         try:
@@ -384,8 +401,28 @@ class LLMExplainer:
                 eklem_bulgulari=eklem_bulgulari,
                 sigara=sigara,
             )
-            response = self._model.generate_content(prompt)
-            raw = response.text.strip()
+
+            raw = ""
+            last_err = None
+            for m_name in self._model_names:
+                try:
+                    m = self._get_model(m_name)
+                    response = m.generate_content(
+                        prompt,
+                        request_options={"timeout": 15.0},
+                    )
+                    raw = response.text.strip()
+                    if raw:
+                        last_err = None
+                        break
+                except Exception as ex:
+                    last_err = ex
+                    print(f"[LLM] Model {m_name} çağrısı başarısız ({ex}). Sıradaki model deneniyor...")
+                    continue
+
+            if not raw:
+                print(f"[LLM] Tüm modeller yanıt veremedi (Son hata: {last_err}). Fallback devrede.")
+                return build_fallback_explanation(prediction), "", True, kilavuz_atiflar
 
             # ── Katman 1: Markdown kod bloklarını temizle ─────────────────────
             clean_raw = raw
@@ -459,5 +496,5 @@ class LLMExplainer:
             enabled=settings.llm_enabled,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
-            model_name=getattr(settings, "llm_model", "gemini-3.6-flash"),
+            model_name=getattr(settings, "llm_model", "gemini-3.1-flash-lite-preview"),
         )

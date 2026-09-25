@@ -55,22 +55,23 @@ TOP_K = 5
 MAX_DISTANCE_THRESHOLD = 0.65
 
 # ─── Generation ──────────────────────────────────────────────────────────────
-# Birincil model: gemini-3.5-flash-lite — Free Tier günlük 1500 istek, uygun kota.
-# Önceki gemini-3.6-flash sadece 20 req/day Free Tier kotasıyla çalışıyordu ve
-# kota dolunca tüm sorgular 429 → fallback → "bulunamadı" hatasıyla sonuçlanıyordu.
-QA_MODEL = "gemini-3.5-flash-lite"
+# Birincil model: gemini-3.1-flash-lite-preview — Yüksek kota kapasitesi, hızlı yanıt (~3s).
+# Yedek zinciri: gemini-3.1-flash-lite, gemini-3-flash-preview, gemini-3.5-flash-lite
+QA_MODEL = "gemini-3.1-flash-lite-preview"
 
-# Fallback zinciri: Birincil model 429/hata verirse sıradaki denenir.
-# Bu sayede tek model kotası dolduğunda sistem tamamen durmaz.
+# Fallback zinciri: Birincil model 429/503/timeout verirse sıradaki denenir.
 QA_MODEL_FALLBACKS: list[str] = [
-    "gemini-3.1-flash-lite",   # İkincil — ayrı kota havuzu
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash-lite",
 ]
 
 QA_TEMPERATURE = 0.1        # Klinik doğruluk ve akıcı sentez
 QA_MAX_OUTPUT_TOKENS = 3500 # Kapsamlı klinik açıklamalar ve kaynak alıntıları için tam bütçe
+QA_TIMEOUT_SEC = 12.0       # Model başına sert zaman aşımı (asla frontend'i 90s bekletmez)
 
 # ─── Query Preprocessor ──────────────────────────────────────────────────────
 # Sorgu ön işleme için hafif model: ~80ms gecikme, düşük kota tüketimi.
-# gemini-3.5-flash-lite: cümle reformülasyonu için tam yeterli kapasite.
-PREPROCESSOR_MODEL = "models/gemini-3.5-flash-lite"
+PREPROCESSOR_MODEL = "models/gemini-3.1-flash-lite-preview"
 PREPROCESSOR_MAX_TOKENS = 150  # Reformüle edilmiş sorgu için 2 cümle yeterli
+PREPROCESSOR_TIMEOUT_SEC = 4.0 # Ön işleme için sert zaman aşımı

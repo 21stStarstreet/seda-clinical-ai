@@ -590,11 +590,34 @@ async def guideline_query(
                 [PT(soru=t.soru, cevap=t.cevap) for t in body.gecmis]
                 if body.gecmis else []
             )
-            prep_result = await rag_preprocessor.preprocess(
-                soru=body.soru,
-                gecmis=gecmis_turns,
+            import asyncio
+            prep_result = await asyncio.wait_for(
+                rag_preprocessor.preprocess(
+                    soru=body.soru,
+                    gecmis=gecmis_turns,
+                ),
+                timeout=5.0,
             )
             sorgu_retrieval = prep_result.zengin_sorgu
+            if prep_result.klinik_degil:
+                # Klinik dışı girdi — retrieval ve QA ÇALIŞMAZ, anında geri dön
+                import logging as _log
+                _log.getLogger(__name__).info(
+                    "[guideline-query] Klinik dışı girdi reddedildi: %r", body.soru
+                )
+                return {
+                    "soru": body.soru,
+                    "cevap": (
+                        "Bu sistem yalnızca psoriasis klinik kılavuzlarına ilişkin "
+                        "tıbbi soruları yanıtlamaktadır. Lütfen hastalık, tedavi, "
+                        "ilaç veya kılavuz ile ilgili bir soru sorunuz."
+                    ),
+                    "kaynaklar": [],
+                    "bulunamadi": True,
+                    "klinik_degil": True,
+                    "islem_suresi_ms": prep_result.onisleme_suresi_ms,
+                    "fallback_kullanildi": False,
+                }
             if prep_result.onisleme_yapildi:
                 import logging as _log
                 _log.getLogger(__name__).info(

@@ -114,6 +114,15 @@
                             </div>
                         </div>
                     }
+                    else if (msg.IsKlinikDegil)
+                    {
+                        <div class="rag-bubble-row ai-row fade-in">
+                            <div class="rag-ai-bubble redirect-bubble">
+                                <i class="ph-fill ph-info"></i>
+                                <span>@msg.Text</span>
+                            </div>
+                        </div>
+                    }
                     else if (msg.IsError)
                     {
                         <div class="rag-bubble-row ai-row fade-in">
@@ -376,6 +385,8 @@
         else if (result is not null)
         {
             // ─── Yanıt Türü Ayrımı ────────────────────────────────────────────────────
+            // KlinikDegil=true → Girdi anlamsız/klinik dışı — nazik yönlendirme balonu.
+            //
             // FallbackKullanildi=true → LLM (API) başarısız oldu (429/teknik hata).
             //     Bu durumda "yer almamaktadır" göstermek YANLIŞ — kılavuzda bilgi VAR,
             //     sadece API şu an cevap veremedi. Doğru mesaj: teknik sorun uyarısı.
@@ -384,16 +395,26 @@
             //     "bu konuda bilgi yok" dedi. Doğru mesaj: "yer almamaktadır".
             //
             // Normal yanıt → result.Cevap direkt gösterilir.
-            if (result.FallbackKullanildi)
+            if (result.KlinikDegil)
+            {
+                // Klinik dışı girdi — özel yönlendirme balonu
+                _mesajlar.Add(new ChatMessage(
+                    "assistant",
+                    "Bu sistem yalnızca psoriasis klinik kılavuzlarına ilişkin tıbbi soruları yanıtlamaktadır. "
+                    + "Lütfen hastalık, tedavi, ilaç veya kılavuz ile ilgili bir soru sorunuz.",
+                    IsKlinikDegil: true
+                ));
+            }
+            else if (result.FallbackKullanildi)
             {
                 // Teknik hata — API'den gelen mesajı kullan, error balonu olarak göster
-                _mesajlar.Add(new ChatMessage("assistant", result.Cevap, IsError: true));
+                _mesajlar.Add(new ChatMessage("assistant", result.Cevap ?? "", IsError: true));
             }
             else
             {
                 var cevapMetni = result.Bulunamadi
                     ? "Bu soruya ilişkin bilgi verilen kılavuz bölümlerinde yer almamaktadır. Lütfen kılavuzun ilgili bölümünü doğrudan inceleyiniz."
-                    : result.Cevap;
+                    : (result.Cevap ?? "");
 
                 var yeniMesaj = new ChatMessage(
                     Role: "assistant",
@@ -430,9 +451,9 @@
     {
         var turler = new List<ConversationTurn>();
 
-        // Gerçek mesajları filtrele (loading ve error balonlarını dışla)
+        // Gerçek mesajları filtrele (loading, error ve klinik-dışı balonlarını dışla)
         var gercekMesajlar = excludeLoadingAndError
-            ? mesajlar.Where(m => !m.IsLoading && !m.IsError).ToList()
+            ? mesajlar.Where(m => !m.IsLoading && !m.IsError && !m.IsKlinikDegil).ToList()
             : mesajlar;
 
         // user/assistant çiftlerini bul (sondan başa doğru)

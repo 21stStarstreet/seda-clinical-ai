@@ -21,11 +21,12 @@ public record GuidelineQueryRequest(
 // ─── Yanıt ───────────────────────────────────────────────────────────────────
 
 public record GuidelineQueryResponse(
-    [property: JsonPropertyName("cevap")]               string Cevap,
+    [property: JsonPropertyName("cevap")]               string? Cevap,
     [property: JsonPropertyName("kaynaklar")]           List<GuidelineSource>? Kaynaklar,
     [property: JsonPropertyName("bulunamadi")]          bool Bulunamadi,
     [property: JsonPropertyName("fallback_kullanildi")] bool FallbackKullanildi,
-    [property: JsonPropertyName("islem_suresi_ms")]     double IslemSuresiMs
+    [property: JsonPropertyName("islem_suresi_ms")]     double IslemSuresiMs,
+    [property: JsonPropertyName("klinik_degil")]        bool KlinikDegil = false
 );
 
 public record GuidelineSource(
@@ -44,5 +45,6 @@ public record ChatMessage(
     List<GuidelineSource>? Sources = null,
     bool IsError = false,
     bool IsLoading = false,
-    double IslemSuresiMs = 0
+    double IslemSuresiMs = 0,
+    bool IsKlinikDegil = false   // Klinik dışı girdi yönlendirme balonu
 );

@@ -19,7 +19,7 @@ from typing import Optional
 
 import google.generativeai as genai
 
-from rag.config import QA_MODEL, QA_MODEL_FALLBACKS, QA_TEMPERATURE, QA_MAX_OUTPUT_TOKENS
+from rag.config import QA_MODEL, QA_MODEL_FALLBACKS, QA_TEMPERATURE, QA_MAX_OUTPUT_TOKENS, QA_TIMEOUT_SEC
 from rag.retriever import RetrievalResponse, RetrievalResult
 from config.settings import settings
 
@@ -56,6 +56,13 @@ _SYSTEM_PROMPT = """Sen Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD) v
 
 TEMEL PRENSİPLER:
 
+0. KLİNİK OLMAYAN GİRDİ REDDİ (En Yüksek Öncelik):
+Eğer GÜNCEL SORU aşağıdaki kategorilerden birine giriyorsa, "bulunamadi": true ve "cevap": null döndür — hiçbir klinik bilgi ekleme:
+  - Anlamsız/saçma metin (ör: "Haha!", "hehe", "ahahaha", "asdfjkl", "!!!")
+  - Selamlama veya gündelik konuşma (ör: "merhaba", "nasılsın", "teşekkürler", "tamam")
+  - Klinik bağlamla hiçbir ilişkisi olmayan ifadeler
+Bu durumda "ret_nedeni" alanını da doldur.
+
 1. KANITA DAYALI VE BAĞLAM ODAKLI:
 Sana verilen BAĞLAM bloğundaki kılavuz pasajlarını temel alarak soruyu doğrudan, kapsamlı ve doyurucu şekilde yanıtla. Bağlamdaki klinik mantığı (tanı kriterleri, sevk durumları, tedavi basamakları, takip aralıkları) hekime profesyonelce açıkla.
 
@@ -83,7 +90,16 @@ Her önemli tespitin yanına kılavuz sayfasını ekle: (TR2025, s.12) veya (EG2
       "alinti": "Kılavuzdan alınan kısa kilit ifade (maks 120 karakter)"
     }
   ],
-  "bulunamadi": false
+  "bulunamadi": false,
+  "ret_nedeni": null
+}
+
+Klinik dışı girdi reddinde:
+{
+  "cevap": null,
+  "kaynaklar": [],
+  "bulunamadi": true,
+  "ret_nedeni": "Klinik soru değil"
 }
 
 Markdown, kod bloğu, açıklama yazma. SADECE JSON."""
@@ -221,26 +237,32 @@ class QAEngine:
         for model_name in self._model_names:
             model = self._get_model(model_name)
             try:
-                response = model.generate_content(prompt)
+                response = model.generate_content(
+                    prompt,
+                    request_options={"timeout": QA_TIMEOUT_SEC},
+                )
                 raw = response.text.strip()
-                logger.debug("[QAEngine] Yanıt alındı (model: %s, %d karakter)", model_name, len(raw))
+                logger.info("[QAEngine] Yanıt alındı (model: %s, %d karakter)", model_name, len(raw))
                 last_exc = None
                 break  # Başarılı → döngüden çık
             except Exception as ex:
                 last_exc = ex
-                err_str = str(ex)
+                err_str = str(ex).lower()
                 is_quota = "429" in err_str or "quota" in err_str or "exhausted" in err_str
-                if is_quota:
-                    logger.warning(
-                        "[QAEngine] 429 Kota/RateLimit — model: %s. Bir sonraki modele geçiliyor...",
-                        model_name,
-                    )
-                    # Bir sonraki modele hemen geç — bekleme yok
-                    continue
-                else:
-                    logger.error("[QAEngine] Model hatası (%s): %s", model_name, ex)
-                    # Kota dışı hata — bir sonraki modele geç
-                    continue
+                is_unavailable = "503" in err_str or "unavailable" in err_str or "demand" in err_str
+                is_timeout = "timeout" in err_str or "deadline" in err_str or "504" in err_str
+
+                reason = (
+                    "Kota/429" if is_quota else
+                    "Yoğunluk/503" if is_unavailable else
+                    "Zaman Aşımı/Timeout" if is_timeout else
+                    "Model Hatası"
+                )
+                logger.warning(
+                    "[QAEngine] %s (%s): %s. Bir sonraki modele geçiliyor...",
+                    reason, model_name, ex,
+                )
+                continue
 
         # Tüm modeller başarısız oldu
         if last_exc is not None:

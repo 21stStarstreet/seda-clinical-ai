@@ -4411,6 +4411,16 @@ select.form-input {
     gap: 10px;
 }
 
+.redirect-bubble {
+    background: rgba(99, 102, 241, 0.10);
+    border-color: rgba(99, 102, 241, 0.28);
+    color: #a5b4fc;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    font-style: italic;
+}
+
 .rag-input-dock {
     padding: 16px 20px;
     background: rgba(15, 23, 42, 0.85);

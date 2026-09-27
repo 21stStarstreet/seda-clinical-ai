@@ -1,0 +1,185 @@
+@inject IJSRuntime JS
+
+@*
+    Pulsar Glass — Liquid Glassmorphism Modal Component
+    A backdrop-blur popup modal specifically styled and optimized for hosting
+    Pulsar Glass Segmented Sliders and liquid glass controls.
+*@
+
+@if (IsOpen)
+{
+    <div class="pg-modal-backdrop @(IsVisible ? "pg-fade-in" : "pg-fade-out")"
+         @onclick="HandleBackdropClick">
+        <div class="pg-modal-container"
+             @onclick:stopPropagation="true">
+            
+            @if (ShowHeader)
+            {
+                <div class="pg-modal-header">
+                    <div class="pg-modal-title-group">
+                        @if (!string.IsNullOrWhiteSpace(IconClass))
+                        {
+                            <i class="@IconClass pg-modal-icon"></i>
+                        }
+                        <h3 class="pg-modal-title">@Title</h3>
+                    </div>
+                    <button type="button" class="pg-modal-close" @onclick="CloseAsync" aria-label="Close">
+                        &times;
+                    </button>
+                </div>
+            }
+
+            <div class="pg-modal-body">
+                @ChildContent
+            </div>
+
+            @if (FooterContent != null)
+            {
+                <div class="pg-modal-footer">
+                    @FooterContent
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .pg-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        background: rgba(3, 7, 18, 0.70);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pg-modal-backdrop.pg-fade-in {
+        opacity: 1;
+    }
+    .pg-modal-container {
+        position: relative;
+        width: 100%;
+        max-width: 540px;
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(24px) saturate(190%);
+        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 20px;
+        box-shadow:
+            0 24px 48px -12px rgba(0, 0, 0, 0.65),
+            inset 0 1px 1px rgba(255, 255, 255, 0.15);
+        overflow: hidden;
+        transform: scale(0.95) translateY(10px);
+        transition: transform 0.28s cubic-bezier(0.19, 1.35, 0.32, 1);
+        isolation: isolate;
+    }
+    .pg-fade-in .pg-modal-container {
+        transform: scale(1) translateY(0);
+    }
+    .pg-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .pg-modal-title-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .pg-modal-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
+    }
+    .pg-modal-icon {
+        color: #38bdf8;
+        font-size: 18px;
+    }
+    .pg-modal-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 24px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: color 0.2s, background 0.2s;
+    }
+    .pg-modal-close:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .pg-modal-body {
+        padding: 24px;
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .pg-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 16px 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(15, 23, 42, 0.4);
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Pulsar Glass Modal";
+    [Parameter] public string? IconClass { get; set; }
+    [Parameter] public bool ShowHeader { get; set; } = true;
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    private bool IsVisible { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !IsVisible)
+        {
+            // Yumuşak fade-in için micro-delay
+            await Task.Yield();
+            IsVisible = true;
+        }
+        else if (!IsOpen && IsVisible)
+        {
+            IsVisible = false;
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await CloseAsync();
+        }
+    }
+
+    public async Task CloseAsync()
+    {
+        IsVisible = false;
+        await Task.Delay(200); // Animasyon tamamlansın
+        IsOpen = false;
+        if (IsOpenChanged.HasDelegate)
+        {
+            await IsOpenChanged.InvokeAsync(false);
+        }
+    }
+}

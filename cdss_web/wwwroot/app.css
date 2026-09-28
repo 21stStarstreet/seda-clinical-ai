@@ -185,60 +185,353 @@
     margin: 0 0 32px;
 }
 
-/* Routing cards (Glass Badges) */
-.login-routing-cards {
+/* ─── Liquid Glass Routing Segmented Slider ─── */
+.login-routing-slider-wrap {
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 520px;
+}
+
+.login-routing-track.rag-segmented-track {
+    width: 100%;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
+    padding: 3px;
+    border-radius: 13px;
+    box-sizing: border-box;
+}
+
+.login-routing-track .rag-pill-btn {
+    flex: 1;
+    padding: 8px 10px;
+    min-width: 0;
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.login-routing-track .rag-pill-label {
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.login-routing-track .rag-pill-label i {
+    font-size: 14.5px;
+}
+
+/* ─── Dinamik Seçili Yönlendirme Kartı (Clean Frosted Glass) ─── */
+.login-routing-card-container {
+    width: 100%;
+    max-width: 530px;
 }
 
 .login-routing-card {
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: var(--radius-sm);
-    padding: 14px 18px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 18px;
+    padding: 22px 24px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    transition: all var(--transition);
+    gap: 14px;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-.login-routing-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateX(4px);
-    background: rgba(20, 32, 56, 0.7);
+/* Subtle top glow line based on section */
+.login-routing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 20px;
+    height: 2px;
+    border-radius: 2px;
 }
 
-.login-routing-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #ffffff;
+.card-sistemik::before {
+    background: linear-gradient(90deg, transparent, #10b981, transparent);
+}
+
+.card-ftr::before {
+    background: linear-gradient(90deg, transparent, #0ea5e9, transparent);
+}
+
+.card-aile::before {
+    background: linear-gradient(90deg, transparent, #a855f7, transparent);
+}
+
+.login-routing-card-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.login-routing-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.login-routing-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.box-sistemik {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.box-ftr {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.box-aile {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.login-routing-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.login-routing-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.2px;
+}
+
+.login-routing-sub {
+    font-size: 11.5px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.login-routing-desc {
+    font-size: 12.5px;
+    color: #cbd5e1;
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ─── Algoritmik Tetikleyici Eşikler (Chips) ─── */
+.login-routing-triggers {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.triggers-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.triggers-heading i {
+    font-size: 13px;
+    color: #38bdf8;
+}
+
+.triggers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.trigger-chip {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.trigger-chip i {
+    font-size: 12px;
+}
+
+.chip-sistemik {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.chip-ftr {
+    background: rgba(14, 165, 233, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.chip-aile {
+    background: rgba(168, 85, 247, 0.12);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+/* ─── 2 Kolonlu Yapılandırılmış Klinik Matris ─── */
+.login-routing-matrix {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 580px) {
+    .login-routing-matrix {
+        grid-template-columns: 1fr;
+    }
+}
+
+.matrix-col {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
-.login-routing-label i { font-size: 15px; color: var(--accent); }
-
-.login-routing-desc {
-    font-size: 11.5px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    padding-left: 23px;
+.matrix-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
 }
 
-.login-routing-score {
+.matrix-title i {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.matrix-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.matrix-list li {
+    font-size: 11.5px;
+    color: #e2e8f0;
+    line-height: 1.45;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.matrix-list li i {
+    font-size: 11px;
+    margin-top: 3px;
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.matrix-guidelines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.badge-guideline {
     font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+/* ─── Score & Footer ─── */
+.login-routing-score {
+    font-size: 11px;
     font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding-left: 23px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.score-sistemik {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.score-ftr {
+    background: rgba(14, 165, 233, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
+.score-aile {
+    background: rgba(168, 85, 247, 0.18);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.login-routing-footer {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: #94a3b8;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
     margin-top: 2px;
+}
+
+.login-routing-footer i {
+    font-size: 14px;
+    color: #38bdf8;
+    flex-shrink: 0;
 }
 
 .login-split-watermark {
@@ -271,6 +564,26 @@
     align-items: center;
     gap: 10px;
     z-index: 10;
+}
+
+.login-theme-track.rag-segmented-track {
+    padding: 3px;
+    border-radius: 12px;
+}
+
+.login-theme-track .rag-pill-btn {
+    padding: 5px 14px;
+    min-width: 64px;
+    font-size: 12px;
+    border-radius: 9px;
+}
+
+.login-theme-track .rag-pill-label {
+    gap: 5px;
+}
+
+.login-theme-track .rag-pill-label i {
+    font-size: 13.5px;
 }
 
 .theme-toggle-btn {
@@ -467,31 +780,122 @@
 }
 
 [data-theme="light"] .login-routing-card {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(20px) saturate(190%);
-    -webkit-backdrop-filter: blur(20px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.95);
-    box-shadow: 0 8px 24px -4px rgba(14, 165, 233, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-top: 1.5px solid #ffffff;
+    box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08), inset 0 1px 0 #ffffff;
 }
 
-[data-theme="light"] .login-routing-card:hover {
-    background: rgba(255, 255, 255, 0.88);
-    border-color: rgba(13, 148, 136, 0.4);
-    border-top-color: #ffffff;
-    box-shadow: 0 12px 28px -4px rgba(13, 148, 136, 0.15), inset 0 1px 1px 0 #ffffff;
+[data-theme="light"] .box-sistemik {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border-color: rgba(16, 185, 129, 0.25);
 }
 
-[data-theme="light"] .login-routing-label {
+[data-theme="light"] .box-ftr {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0284c7;
+    border-color: rgba(14, 165, 233, 0.25);
+}
+
+[data-theme="light"] .box-aile {
+    background: rgba(168, 85, 247, 0.12);
+    color: #7c3aed;
+    border-color: rgba(168, 85, 247, 0.25);
+}
+
+[data-theme="light"] .login-routing-title {
     color: #0f172a;
 }
 
+[data-theme="light"] .login-routing-sub {
+    color: #64748b;
+}
+
 [data-theme="light"] .login-routing-desc {
+    color: #334155;
+}
+
+[data-theme="light"] .login-routing-triggers {
+    background: rgba(248, 250, 252, 0.85);
+    border-color: #e2e8f0;
+}
+
+[data-theme="light"] .triggers-heading {
     color: #475569;
 }
 
-[data-theme="light"] .login-routing-score {
-    color: #0d9488;
+[data-theme="light"] .chip-sistemik {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+[data-theme="light"] .chip-ftr {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
+[data-theme="light"] .chip-aile {
+    background: #faf5ff;
+    color: #6b21a8;
+    border-color: #e9d5ff;
+}
+
+[data-theme="light"] .matrix-col {
+    background: rgba(248, 250, 252, 0.85);
+    border-color: #e2e8f0;
+}
+
+[data-theme="light"] .matrix-title {
+    color: #475569;
+}
+
+[data-theme="light"] .matrix-title i {
+    color: #0284c7;
+}
+
+[data-theme="light"] .matrix-list li {
+    color: #1e293b;
+}
+
+[data-theme="light"] .matrix-list li i {
+    color: #0284c7;
+}
+
+[data-theme="light"] .badge-guideline {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .score-sistemik {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="light"] .score-ftr {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0284c7;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+[data-theme="light"] .score-aile {
+    background: rgba(168, 85, 247, 0.12);
+    color: #7c3aed;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+[data-theme="light"] .login-routing-footer {
+    border-top-color: #e2e8f0;
+    color: #64748b;
+}
+
+[data-theme="light"] .login-routing-footer i {
+    color: #0284c7;
 }
 
 [data-theme="light"] .login-split-watermark {

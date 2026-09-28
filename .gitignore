@@ -83,3 +83,6 @@ Library/
 ._*
 .Spotlight-V100
 .Trashes
+
+# Standalone Playground & Showcase
+pulsar_glass/

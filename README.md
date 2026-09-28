@@ -3386,3 +3386,226 @@ cd cdss_web && dotnet run --urls "http://localhost:5000"
 - ChromaDB indekslenmemişse `/guideline-query` → `503 Service Unavailable`; diğer endpointler etkilenmez
 - Gemini Free Tier rate limit'e tabidir; yoğun kullanımda `/guideline-query` geçici `429` dönebilir
 - İndeksleme tamamlandıktan sonra ChromaDB disk üzerinde kalıcıdır; API yeniden başlatılırken tekrar indeksleme yapılmaz
+
+---
+
+# Faz 6 — Güncel Değişiklikler (Eylül 2026)
+
+> **Tarih**: Eylül 2026
+> **Ortam**: .NET 8 Blazor Server + FastAPI (Python 3.13) + `.venv`
+
+---
+
+## Adım 1 — RAG: Sorgu Önişleyici (`rag/query_preprocessor.py`)
+
+Faz 5'te `/guideline-query` stateless sorgular gönderiyordu. `QueryPreprocessor` modülü buna üç aşamalı bir ön işleme zinciri ekler:
+
+| Aşama | Açıklama |
+|-------|----------|
+| 1. Kısaltma genişletme | Tıbbi kısaltmalar sözlük tabanlı açılır: `MTX → metotreksat`, `PASI → Psoriasis Area and Severity Index`, `BSA → Body Surface Area` vb. |
+| 2. Bağlam füzyonu | Önceki sohbet turları (maks. 3 Q/A çifti) analiz edilerek devam ifadeleri (`bunu`, `bu durumda`) mevcut soruyla birleştirilir |
+| 3. Gemini reformülasyonu | Birleştirilmiş sorgu `gemini-3.1-flash-lite-preview` ile tıbbi terminolojiye uygun şekilde yeniden yazılır (~80 ms) |
+
+`rag_preprocessor` başlatılamazsa endpoint bozulmaz; `soru` ham hâliyle kullanılır.
+
+### `rag/config.py` — Model adları (düzeltildi)
+
+```python
+QA_MODEL             = "gemini-3.1-flash-lite-preview"   # birincil
+QA_FALLBACK_MODELS   = [
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash-lite",
+]
+PREPROCESSOR_MODEL   = "models/gemini-3.1-flash-lite-preview"
+```
+
+> **Düzeltme:** Faz 5 bölümünde `QA_MODEL = "gemini-3.6-flash"` yazıyordu. Bu model adı gerçekte `"gemini-3.1-flash-lite-preview"` olarak güncellendi.
+
+---
+
+## Adım 2 — RAG: Sohbet Geçmişi (Çok Turlu Sorgulama)
+
+`GuidelineQueryRequest` modeline `gecmis` alanı eklendi:
+
+```python
+class ConversationTurn(BaseModel):
+    soru: str = Field(..., max_length=500)
+    cevap: str = Field(..., max_length=2000)
+
+class GuidelineQueryRequest(BaseModel):
+    soru: str
+    kaynak_filtre: Optional[list[str]] = None
+    gecmis: Optional[list[ConversationTurn]] = None
+    # None → stateless davranış (geriye dönük uyumlu)
+```
+
+Güncel `/guideline-query` akışı:
+
+```
+JWT doğrulama + rate limit
+    ↓
+rag_preprocessor.preprocess(soru, gecmis)   ← kısaltma + bağlam + reformülasyon
+    ↓
+rag_retriever.retrieve(isle_soru, kaynak_filtre)
+    ↓
+rag_qa.answer(soru, isle_soru, retrieval, gecmis)  ← gecmis QA prompt'una eklenir
+    ↓
+JSON yanıt
+```
+
+---
+
+## Adım 3 — Yeni API Rotaları
+
+### `api/patients.py` — Hasta Kimlik Yönetimi
+
+`/patients` prefix'li yeni router; `api/main.py`'de `app.include_router(patients_router)` ile dahil edildi.
+
+| Method | Endpoint | Auth | Açıklama |
+|--------|----------|------|----------|
+| `POST` | `/patients/register` | JWT | TC hash ile yeni hasta kaydı |
+| `GET` | `/patients/lookup` | JWT | TC hash ile hasta arama |
+| `GET` | `/patients/{patient_tc_hash}/visits` | JWT | Hasta ziyaret geçmişi (audit_log'dan) |
+
+TC numarası ham olarak saklanmaz. `hash_tc()` (SHA-256) ile hash'lenir; ad/soyad alanları `encrypt_field()` (Fernet) ile şifreli yazılır.
+
+### `api/routes/auth.py` — Yeni Yardımcı Bağımlılıklar
+
+`api/security.py` kaldırıldı; kimlik doğrulama mantığı `api/routes/auth.py`'ye taşındı.
+
+```python
+require_admin     # Roles="admin" değilse HTTP 403
+require_any_role  # Herhangi giriş yapmış kullanıcı (doktor veya admin)
+```
+
+### `audit/access_logger.py` — HTTP Erişim Logları
+
+`@app.middleware("http")` ile tüm istekler yakalanır. Her kayıt:
+
+```
+kullanıcı_adi, ip_adresi, endpoint, http_metodu,
+yanıt_kodu, islem_suresi_ms, zaman_damgasi
+```
+
+Bellek içi son 1000 kayıt tutulur (disk'e yazılmaz). İki admin endpoint'i:
+
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| `GET` | `/admin/access-logs` | Son HTTP erişim kayıtları (admin, 10/dak) |
+| `GET` | `/admin/access-summary` | Kullanıcı başına son 7 günün özeti (admin, 10/dak) |
+
+---
+
+## Adım 4 — Login.razor: Yapılandırılmış Klinik Karar Matrisi
+
+Sol panel yönlendirme kartları (`eski: .login-routing-specs / spec-row / spec-label / spec-val`) tamamen kaldırılıp yeniden yazıldı.
+
+### Yeni Kart Yapısı
+
+```
+1. Başlık satırı
+   ├── Renk kodlu ikon kutusu
+   ├── Başlık + alt başlık
+   └── Skor rozeti: F1 · <değer> · %<değer> Doğruluk
+
+2. Açıklama paragrafı
+
+3. Algoritmik Karar Eşikleri (Trigger Chips)
+   Etiket: "Algoritmik Karar Eşikleri"
+
+4. 2-Kolonlu Matris (CSS Grid 1fr 1fr, <580px → 1fr)
+   ├── Sol: "İncelenen Klinik Belirteçler" (bullet list)
+   └── Sağ: "Hedef Çıktı & Standart" (bullet list + kılavuz rozetleri)
+
+5. Alt bilgi (eğitim/doğrulama kaynağı)
+```
+
+### Kartlar — Skor ve Trigger Chip Değerleri
+
+| Kart | Skor Rozeti | Trigger Chip'leri |
+|------|-------------|-------------------|
+| Sistemik & Biyolojik Tedavi | `F1 · 0.996 · %98.4 Doğruluk` | `PASI > 10`, `DLQI > 10`, `BSA > %10`, `Dirençli Özel Bölge` |
+| Fizik Tedavi & Romatoloji | `F1 · 0.972 · %97.8 Doğruluk` | `Sabah Tutukluğu > 30 dk`, `CASPAR ≥ 3`, `Daktilit`, `Tırnak Tutulumu (NAPSI)` |
+| Aile Hekimliği | `F1 · 0.954 · %96.1 Doğruluk` | `VKİ ≥ 30 kg/m²`, `LDL > 130 mg/dL`, `Aktif Sigara`, `Kardiyovasküler Risk` |
+
+Renk göstergesi `border-left: 4px solid` yerine `::before` pseudo-element gradient üst çizgisi olarak uygulandı.
+
+---
+
+## Adım 5 — app.css v4.9
+
+`App.razor`: `app.css?v=4.8` → `app.css?v=4.9`.
+
+**Kaldırılan:** `.login-routing-specs`, `.login-routing-spec-row`, `.spec-label`, `.spec-val`
+
+**Eklenen sınıflar:**
+
+| Sınıf | Açıklama |
+|-------|----------|
+| `.login-routing-card` | `overflow: hidden`, `position: relative`, `border-radius: 18px` |
+| `.card-sistemik::before` / `.card-ftr::before` / `.card-aile::before` | Gradient üst parlama çizgisi |
+| `.login-routing-triggers`, `.triggers-heading`, `.triggers-grid` | Trigger chip konteyner |
+| `.trigger-chip`, `.chip-sistemik`, `.chip-ftr`, `.chip-aile` | Renkli eşik chip'leri |
+| `.login-routing-matrix` | CSS Grid, `1fr 1fr` (< 580px: `1fr`) |
+| `.matrix-col`, `.matrix-title`, `.matrix-list` | Matris kolon bileşenleri |
+| `.matrix-guidelines`, `.badge-guideline` | Kılavuz rozetleri |
+| `.login-routing-footer` | Alt bilgi satırı |
+
+Tüm yeni sınıflar için `[data-theme="light"]` override'ları eklendi.
+
+---
+
+## Adım 6 — App.razor: Satır İçi SVG Filtreleri
+
+`<body>` açılışına, CSS `filter: url(#...)` referanslarıyla çalışan iki GPU hızlandırmalı SVG filtresi eklendi:
+
+| Filtre ID | Teknik | Kullanım |
+|-----------|--------|----------|
+| `liquidGlassRefract` | `feColorMatrix` + `feOffset` + `feBlend` (kromatik aberasyon) | Login slider cam kenar efekti |
+| `waterRefractUnder` | `feTurbulence` + `feDisplacementMap` (sıvı su kırılması) | Slider buton altı refraksiyon |
+
+---
+
+## Güncel Dosya Listesi (Faz 6 Eklemeleri)
+
+```
+dermatology_project/
+├── api/
+│   ├── main.py                     ← gecmis desteği, patients_router, access_logger middleware
+│   ├── patients.py                 ← YENİ: /patients/* (TC hash, kayıt, ziyaret geçmişi)
+│   └── routes/
+│       └── auth.py                 ← security.py yerine geçti; require_admin, require_any_role
+├── audit/
+│   ├── logger.py                   ← hash_tc(), encrypt_field(), decrypt_field(), Patient model
+│   └── access_logger.py            ← YENİ: HTTP erişim logları (bellek içi, son 1000)
+├── rag/
+│   ├── config.py                   ← QA_MODEL düzeltildi, PREPROCESSOR_MODEL, fallback zinciri
+│   └── query_preprocessor.py       ← YENİ: kısaltma + bağlam füzyonu + Gemini reformülasyonu
+└── cdss_web/
+    ├── Components/
+    │   ├── App.razor               ← SVG filtre bloku, app.css?v=4.9
+    │   └── Pages/
+    │       └── Login.razor         ← Trigger chips + 2-kolonlu klinik matris
+    └── wwwroot/
+        └── app.css                 ← v4.9: matrix/trigger/badge/glow sınıfları + light theme overrides
+```
+
+---
+
+## Güncel Endpoint Tablosu (Tüm Fazlar)
+
+| Method | Endpoint | Auth | Rate Limit | Açıklama |
+|--------|----------|------|------------|----------|
+| `POST` | `/token` | — | 10/dak | JWT alma (OAuth2 Password Flow) |
+| `POST` | `/logout` | JWT | — | Token kara listeye ekle |
+| `GET` | `/health` | — | — | Model/LLM durum kontrolü (public) |
+| `POST` | `/predict` | JWT | 30/dak | Tahmin + SHAP + LLM açıklaması |
+| `GET` | `/audit/logs` | JWT | 20/dak | Son tahmin kayıtları |
+| `GET` | `/audit/logs/{id}` | JWT | 20/dak | Tekil log detayı |
+| `POST` | `/guideline-query` | JWT | 10/dak | RAG kılavuz soru-cevap (çok turlu) |
+| `POST` | `/patients/register` | JWT | — | TC hash ile hasta kaydı |
+| `GET` | `/patients/lookup` | JWT | — | TC hash ile hasta arama |
+| `GET` | `/patients/{hash}/visits` | JWT | — | Hasta ziyaret geçmişi |
+| `GET` | `/admin/access-logs` | JWT (admin) | 10/dak | HTTP erişim logları |
+| `GET` | `/admin/access-summary` | JWT (admin) | 10/dak | Kullanıcı erişim özeti (7 gün) |

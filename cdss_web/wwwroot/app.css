@@ -64,8 +64,8 @@
     --glass-bg-hover:   rgba(255, 255, 255, 0.88);
     --glass-border:     rgba(255, 255, 255, 0.85);
     --glass-border-top: #FFFFFF;
-    --glass-blur:       blur(30px) saturate(200%);
-    --glass-shadow:     0 24px 55px -12px rgba(14, 165, 233, 0.14), 0 8px 24px -4px rgba(15, 23, 42, 0.04), inset 0 1.5px 1px 0 #FFFFFF;
+    --glass-blur:       blur(14px) saturate(160%);
+    --glass-shadow:     0 20px 48px -12px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.04), inset 0 1.5px 1px 0 #FFFFFF;
 }
 
 .login-wrapper {
@@ -113,7 +113,7 @@
 
 .login-split-wrapper::before {
     content: '';
-    position: fixed;
+    position: absolute;
     top: -200px;
     left: -100px;
     width: 700px;
@@ -121,12 +121,14 @@
     background: radial-gradient(circle, rgba(0, 242, 254, 0.14) 0%, rgba(0, 89, 255, 0.04) 50%, transparent 70%);
     pointer-events: none;
     z-index: 0;
-    filter: blur(50px);
+    filter: blur(36px);
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
 }
 
 .login-split-wrapper::after {
     content: '';
-    position: fixed;
+    position: absolute;
     bottom: -150px;
     right: -50px;
     width: 650px;
@@ -134,7 +136,9 @@
     background: radial-gradient(circle, rgba(20, 184, 166, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 70%);
     pointer-events: none;
     z-index: 0;
-    filter: blur(50px);
+    filter: blur(36px);
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
 }
 
 /* Sol Panel (Glass Branding & Routing Hero) */
@@ -221,218 +225,286 @@
     font-size: 14.5px;
 }
 
-/* ─── Dinamik Seçili Yönlendirme Kartı (Clean Frosted Glass) ─── */
+/* ─── Dinamik Seçili Yönlendirme Kartı (Pulsar Glass Liquid Architecture) ─── */
 .login-routing-card-container {
     width: 100%;
     max-width: 530px;
+    margin-top: 2px;
 }
 
 .login-routing-card {
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(24px) saturate(190%);
-    -webkit-backdrop-filter: blur(24px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.25);
-    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 20px;
     padding: 22px 24px;
     display: flex;
     flex-direction: column;
     gap: 14px;
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.5);
     box-sizing: border-box;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    overflow: hidden;
+
+    /* Katman 1 & 2: Optik Taşıyıcı & Çift Açılı Kristal Gradyan */
+    background: linear-gradient(150deg, rgba(16, 26, 46, 0.78) 0%, rgba(9, 16, 30, 0.90) 100%);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+
+    /* Katman 3: Pürüzsüz Saf Sıvı Cam Çerçeve (Renkli Yan Border Yok!) */
+    border: 1px solid rgba(255, 255, 255, 0.09);
+
+    /* Katman 4: Yükseklik & Derinlik Kostikleri */
+    box-shadow: 
+        0 24px 60px -12px rgba(0, 0, 0, 0.60),
+        0 8px 24px -4px rgba(0, 0, 0, 0.35),
+        inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.16),
+        inset 0 -1px 2px 0 rgba(0, 0, 0, 0.40);
+
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Subtle top glow line based on section */
+.login-routing-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 28px 70px -12px rgba(0, 0, 0, 0.68),
+        0 12px 30px -4px rgba(0, 0, 0, 0.40),
+        inset 0 1px 2px 0 rgba(255, 255, 255, 0.22),
+        inset 0 -1px 2px 0 rgba(0, 0, 0, 0.40);
+}
+
+/* Katman 5: Üst Tepe Noktası Işık Parlaması (Specular Crest) */
 .login-routing-card::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 20px;
-    right: 20px;
-    height: 2px;
-    border-radius: 2px;
+    left: 12%;
+    right: 12%;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+    pointer-events: none;
+    z-index: 2;
+    border-radius: 9999px;
 }
 
-.card-sistemik::before {
-    background: linear-gradient(90deg, transparent, #10b981, transparent);
-}
 
-.card-ftr::before {
-    background: linear-gradient(90deg, transparent, #0ea5e9, transparent);
-}
 
-.card-aile::before {
-    background: linear-gradient(90deg, transparent, #a855f7, transparent);
-}
-
-.login-routing-card-header {
+/* ─── Kart Başlığı & Pulsar Glass Metrik Hapı ─── */
+.routing-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
 }
 
-.login-routing-header-left {
+.routing-header-main {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     flex: 1;
     min-width: 0;
 }
 
-.login-routing-icon-box {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+.routing-icon-capsule {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 24px;
     flex-shrink: 0;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: transform 0.25s ease;
 }
 
-.box-sistemik {
-    background: rgba(16, 185, 129, 0.15);
+.login-routing-card:hover .routing-icon-capsule {
+    transform: scale(1.04);
+}
+
+.capsule-sistemik {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.32);
     color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.22), 0 4px 14px rgba(16, 185, 129, 0.18);
 }
 
-.box-ftr {
-    background: rgba(14, 165, 233, 0.15);
+.capsule-ftr {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.20) 0%, rgba(14, 165, 233, 0.08) 100%);
+    border: 1px solid rgba(14, 165, 233, 0.32);
     color: #38bdf8;
-    border: 1px solid rgba(14, 165, 233, 0.3);
+    box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.22), 0 4px 14px rgba(14, 165, 233, 0.18);
 }
 
-.box-aile {
-    background: rgba(168, 85, 247, 0.15);
+.capsule-aile {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.20) 0%, rgba(168, 85, 247, 0.08) 100%);
+    border: 1px solid rgba(168, 85, 247, 0.32);
     color: #c084fc;
-    border: 1px solid rgba(168, 85, 247, 0.3);
+    box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.22), 0 4px 14px rgba(168, 85, 247, 0.18);
 }
 
-.login-routing-title-wrap {
+.routing-title-group {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
 }
 
-.login-routing-title {
-    font-size: 15.5px;
+.routing-card-title {
+    font-size: 16px;
     font-weight: 700;
     color: #ffffff;
     margin: 0;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.3px;
+    line-height: 1.25;
 }
 
-.login-routing-sub {
+.routing-card-sub {
     font-size: 11.5px;
     color: #94a3b8;
     font-weight: 500;
+    letter-spacing: -0.1px;
 }
 
-.login-routing-desc {
+/* Model Doğruluk Oranı Metni (Kapsülsüz, Zarif Tipografi) */
+.routing-score-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2dd4bf;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Klinik Özet */
+.routing-card-desc {
     font-size: 12.5px;
     color: #cbd5e1;
-    line-height: 1.55;
+    line-height: 1.58;
     margin: 0;
 }
 
-/* ─── Algoritmik Tetikleyici Eşikler (Chips) ─── */
-.login-routing-triggers {
+/* ─── Algoritmik Tetikleyici Eşikler (Pulsar Glass Chips — SEDA Marka Renkleri) ─── */
+.routing-triggers-panel {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    padding: 10px 12px;
+    gap: 8px;
+    background: rgba(13, 26, 44, 0.45);
+    border: 1px solid rgba(20, 184, 166, 0.18);
+    border-radius: 14px;
+    padding: 11px 13px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-.triggers-heading {
+.triggers-panel-header {
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #94a3b8;
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.triggers-heading i {
-    font-size: 13px;
-    color: #38bdf8;
+.triggers-panel-header span {
+    background: linear-gradient(270deg, #00f2fe, #0059ff, #14b8a6, #00f2fe);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: sedaGradientFlow 4s ease infinite;
+    display: inline-block;
+    will-change: background-position;
 }
 
-.triggers-grid {
+.triggers-panel-header i {
+    font-size: 13px;
+    color: #00f2fe;
+    filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.6));
+}
+
+.triggers-chips-wrap {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.trigger-chip {
+/* ─── SEDA Yazısı Renklerinde Akışkan Animasyonlu Çipler ─── */
+.pg-trigger-chip,
+.seda-flow-chip,
+.chip-sistemik,
+.chip-ftr,
+.chip-aile {
     font-size: 11.5px;
-    font-weight: 600;
-    padding: 4px 9px;
-    border-radius: 8px;
+    font-weight: 700;
+    padding: 5.5px 10.5px;
+    border-radius: 9px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     white-space: nowrap;
+    position: relative;
+    cursor: default;
+    
+    /* SEDA Yazısındaki Renklerle Akışkan Canlı Gradyan */
+    background: linear-gradient(270deg, rgba(0, 242, 254, 0.16) 0%, rgba(0, 89, 255, 0.18) 35%, rgba(20, 184, 166, 0.24) 70%, rgba(0, 242, 254, 0.16) 100%) !important;
+    background-size: 300% 300% !important;
+    animation: sedaGradientFlow 4s ease infinite !important;
+    will-change: background-position;
+    
+    border: 1px solid rgba(0, 242, 254, 0.42) !important;
+    color: #e0faff !important;
+    box-shadow: 0 2px 10px rgba(0, 242, 254, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.trigger-chip i {
-    font-size: 12px;
+.pg-trigger-chip i,
+.seda-flow-chip i,
+.chip-sistemik i,
+.chip-ftr i,
+.chip-aile i {
+    font-size: 12.5px;
+    color: #00f2fe !important;
+    filter: drop-shadow(0 0 5px rgba(0, 242, 254, 0.65));
 }
 
-.chip-sistemik {
-    background: rgba(16, 185, 129, 0.12);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.chip-ftr {
-    background: rgba(14, 165, 233, 0.12);
-    color: #38bdf8;
-    border: 1px solid rgba(14, 165, 233, 0.3);
-}
-
-.chip-aile {
-    background: rgba(168, 85, 247, 0.12);
-    color: #c084fc;
-    border: 1px solid rgba(168, 85, 247, 0.3);
+.pg-trigger-chip:hover,
+.seda-flow-chip:hover {
+    transform: translateY(-1.5px);
+    border-color: #00f2fe !important;
+    box-shadow: 0 4px 18px rgba(0, 242, 254, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
 }
 
 /* ─── 2 Kolonlu Yapılandırılmış Klinik Matris ─── */
-.login-routing-matrix {
+.routing-matrix-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
 
 @media (max-width: 580px) {
-    .login-routing-matrix {
+    .routing-matrix-grid {
         grid-template-columns: 1fr;
     }
 }
 
-.matrix-col {
-    background: rgba(255, 255, 255, 0.02);
+.matrix-tile {
+    background: rgba(15, 23, 42, 0.30);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 14px;
+    padding: 11px 13px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
-.matrix-title {
-    font-size: 11px;
+.matrix-tile-header {
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     color: #94a3b8;
     display: flex;
     align-items: center;
@@ -440,21 +512,21 @@
     text-transform: uppercase;
 }
 
-.matrix-title i {
+.matrix-tile-header i {
     font-size: 13px;
     color: #64748b;
 }
 
-.matrix-list {
+.matrix-tile-list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 }
 
-.matrix-list li {
+.matrix-tile-list li {
     font-size: 11.5px;
     color: #e2e8f0;
     line-height: 1.45;
@@ -463,14 +535,14 @@
     gap: 6px;
 }
 
-.matrix-list li i {
+.matrix-tile-list li i {
     font-size: 11px;
     margin-top: 3px;
     color: #38bdf8;
     flex-shrink: 0;
 }
 
-.matrix-guidelines {
+.matrix-guideline-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -478,61 +550,25 @@
     padding-top: 4px;
 }
 
-.badge-guideline {
+.guideline-tag {
     font-size: 10.5px;
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     color: #cbd5e1;
-}
-
-/* ─── Score & Footer ─── */
-.login-routing-score {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 6px;
-    letter-spacing: 0.04em;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.score-sistemik {
-    background: rgba(16, 185, 129, 0.18);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.score-ftr {
-    background: rgba(14, 165, 233, 0.18);
-    color: #38bdf8;
-    border: 1px solid rgba(14, 165, 233, 0.4);
-}
-
-.score-aile {
-    background: rgba(168, 85, 247, 0.18);
-    color: #c084fc;
-    border: 1px solid rgba(168, 85, 247, 0.4);
-}
-
-.login-routing-footer {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 7px;
-    font-size: 11px;
-    color: #94a3b8;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    padding-top: 10px;
-    margin-top: 2px;
+    gap: 4px;
 }
 
-.login-routing-footer i {
-    font-size: 14px;
+.guideline-tag i {
+    font-size: 11px;
     color: #38bdf8;
-    flex-shrink: 0;
 }
+
+
 
 .login-split-watermark {
     position: absolute;
@@ -598,7 +634,7 @@
     font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
     font-family: inherit;
     backdrop-filter: blur(8px);
 }
@@ -675,7 +711,7 @@
     font-size: 14px;
     color: #ffffff;
     font-family: inherit;
-    transition: all var(--transition);
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
     box-sizing: border-box;
     outline: none;
 }
@@ -705,7 +741,7 @@
     justify-content: center;
     gap: 8px;
     margin-top: 18px;
-    transition: all var(--transition);
+    transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
     box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
 }
 
@@ -767,6 +803,8 @@
 /* Sol Panel — Açık Tema (Çok hafif, ferah, pastel buz esintisi) */
 [data-theme="light"] .login-split-left {
     background: linear-gradient(135deg, rgba(240, 248, 255, 0.88) 0%, rgba(228, 241, 254, 0.65) 60%, rgba(240, 249, 255, 0.75) 100%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border-right: 1px solid rgba(14, 165, 233, 0.08);
     box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.8);
 }
@@ -779,124 +817,150 @@
     color: #334155;
 }
 
+/* ─── Light Theme: Pulsar Glass Routing Card ─── */
 [data-theme="light"] .login-routing-card {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    border-top: 1.5px solid #ffffff;
-    box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08), inset 0 1px 0 #ffffff;
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.90) 0%, rgba(240, 248, 255, 0.80) 100%);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 
+        0 20px 48px -10px rgba(14, 165, 233, 0.12), 
+        0 4px 16px -2px rgba(15, 23, 42, 0.04), 
+        inset 0 1.5px 1.5px 0 #FFFFFF;
 }
 
-[data-theme="light"] .box-sistemik {
-    background: rgba(16, 185, 129, 0.12);
+/* İç elemanlarda gereksiz nested backdrop-filter'ları sıfırlayarak GPU'yu rahatlat */
+[data-theme="light"] .login-routing-card .routing-icon-capsule,
+[data-theme="light"] .login-routing-card .pg-trigger-chip,
+[data-theme="light"] .login-routing-card .matrix-tile {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+[data-theme="light"] .login-routing-card::before {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 50%, transparent 100%);
+}
+
+
+
+[data-theme="light"] .capsule-sistemik {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(16, 185, 129, 0.05) 100%);
     color: #059669;
-    border-color: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.28);
+    box-shadow: inset 0 1px 1px #ffffff, 0 2px 8px rgba(16, 185, 129, 0.12);
 }
 
-[data-theme="light"] .box-ftr {
-    background: rgba(14, 165, 233, 0.12);
+[data-theme="light"] .capsule-ftr {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.14) 0%, rgba(14, 165, 233, 0.05) 100%);
     color: #0284c7;
-    border-color: rgba(14, 165, 233, 0.25);
+    border-color: rgba(14, 165, 233, 0.28);
+    box-shadow: inset 0 1px 1px #ffffff, 0 2px 8px rgba(14, 165, 233, 0.12);
 }
 
-[data-theme="light"] .box-aile {
-    background: rgba(168, 85, 247, 0.12);
+[data-theme="light"] .capsule-aile {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.14) 0%, rgba(168, 85, 247, 0.05) 100%);
     color: #7c3aed;
-    border-color: rgba(168, 85, 247, 0.25);
+    border-color: rgba(168, 85, 247, 0.28);
+    box-shadow: inset 0 1px 1px #ffffff, 0 2px 8px rgba(168, 85, 247, 0.12);
 }
 
-[data-theme="light"] .login-routing-title {
+[data-theme="light"] .routing-card-title {
     color: #0f172a;
 }
 
-[data-theme="light"] .login-routing-sub {
+[data-theme="light"] .routing-card-sub {
     color: #64748b;
 }
 
-[data-theme="light"] .login-routing-desc {
+[data-theme="light"] .routing-score-text {
+    color: #0d9488;
+}
+
+[data-theme="light"] .routing-card-desc {
     color: #334155;
 }
 
-[data-theme="light"] .login-routing-triggers {
-    background: rgba(248, 250, 252, 0.85);
-    border-color: #e2e8f0;
+[data-theme="light"] .routing-triggers-panel {
+    background: rgba(240, 253, 250, 0.75);
+    border-color: rgba(13, 148, 136, 0.22);
+    box-shadow: 0 2px 10px rgba(13, 148, 136, 0.06), inset 0 1px 0 #ffffff;
 }
 
-[data-theme="light"] .triggers-heading {
-    color: #475569;
+[data-theme="light"] .triggers-panel-header span {
+    background: linear-gradient(270deg, #0d9488, #0284c7, #0f766e, #0d9488);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: sedaGradientFlow 4s ease infinite;
+    display: inline-block;
+    will-change: background-position;
 }
 
-[data-theme="light"] .chip-sistemik {
-    background: #ecfdf5;
-    color: #047857;
-    border-color: #a7f3d0;
+[data-theme="light"] .triggers-panel-header i {
+    color: #0d9488;
 }
 
-[data-theme="light"] .chip-ftr {
-    background: #f0f9ff;
-    color: #0369a1;
-    border-color: #bae6fd;
-}
-
+/* Açık temada SEDA Akışkan Animasyonlu Çipler */
+[data-theme="light"] .pg-trigger-chip,
+[data-theme="light"] .seda-flow-chip,
+[data-theme="light"] .chip-sistemik,
+[data-theme="light"] .chip-ftr,
 [data-theme="light"] .chip-aile {
-    background: #faf5ff;
-    color: #6b21a8;
-    border-color: #e9d5ff;
+    background: linear-gradient(270deg, rgba(236, 253, 245, 0.95) 0%, rgba(224, 242, 254, 0.95) 35%, rgba(204, 251, 241, 0.95) 70%, rgba(236, 253, 245, 0.95) 100%) !important;
+    background-size: 300% 300% !important;
+    animation: sedaGradientFlow 4s ease infinite !important;
+    will-change: background-position;
+    color: #0f766e !important;
+    border: 1px solid rgba(13, 148, 136, 0.35) !important;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.10), inset 0 1px 0 #ffffff !important;
 }
 
-[data-theme="light"] .matrix-col {
-    background: rgba(248, 250, 252, 0.85);
-    border-color: #e2e8f0;
+[data-theme="light"] .pg-trigger-chip i,
+[data-theme="light"] .seda-flow-chip i,
+[data-theme="light"] .chip-sistemik i,
+[data-theme="light"] .chip-ftr i,
+[data-theme="light"] .chip-aile i {
+    color: #0d9488 !important;
 }
 
-[data-theme="light"] .matrix-title {
+[data-theme="light"] .pg-trigger-chip:hover,
+[data-theme="light"] .seda-flow-chip:hover {
+    background: #ffffff !important;
+    border-color: #0d9488 !important;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.22) !important;
+}
+
+[data-theme="light"] .matrix-tile {
+    background: rgba(248, 250, 252, 0.88);
+    border-color: rgba(226, 232, 240, 0.95);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] .matrix-tile-header {
     color: #475569;
 }
 
-[data-theme="light"] .matrix-title i {
+[data-theme="light"] .matrix-tile-header i {
     color: #0284c7;
 }
 
-[data-theme="light"] .matrix-list li {
+[data-theme="light"] .matrix-tile-list li {
     color: #1e293b;
 }
 
-[data-theme="light"] .matrix-list li i {
+[data-theme="light"] .matrix-tile-list li i {
     color: #0284c7;
 }
 
-[data-theme="light"] .badge-guideline {
+[data-theme="light"] .guideline-tag {
     background: #ffffff;
     border-color: #cbd5e1;
     color: #334155;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] .score-sistemik {
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
 
-[data-theme="light"] .score-ftr {
-    background: rgba(14, 165, 233, 0.12);
-    color: #0284c7;
-    border: 1px solid rgba(14, 165, 233, 0.3);
-}
-
-[data-theme="light"] .score-aile {
-    background: rgba(168, 85, 247, 0.12);
-    color: #7c3aed;
-    border: 1px solid rgba(168, 85, 247, 0.3);
-}
-
-[data-theme="light"] .login-routing-footer {
-    border-top-color: #e2e8f0;
-    color: #64748b;
-}
-
-[data-theme="light"] .login-routing-footer i {
-    color: #0284c7;
-}
 
 [data-theme="light"] .login-split-watermark {
     color: rgba(15, 23, 42, 0.02);
@@ -909,8 +973,8 @@
 
 [data-theme="light"] .login-split-form-wrap {
     background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(32px) saturate(200%);
-    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.8);
     border-top: 1.5px solid rgba(255, 255, 255, 1);
     box-shadow: 0 24px 50px -12px rgba(14, 165, 233, 0.16), 0 8px 24px -4px rgba(15, 23, 42, 0.04), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95);
@@ -1000,7 +1064,7 @@
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 8px rgba(13, 148, 136, 0.2));
+    will-change: background-position;
 }
 
 [data-theme="light"] .seda-animated-subtitle {
@@ -1016,23 +1080,24 @@
         radial-gradient(at 80% 85%, rgba(224, 231, 255, 0.45) 0px, transparent 55%),
         radial-gradient(at 10% 85%, rgba(207, 250, 254, 0.35) 0px, transparent 50%),
         radial-gradient(at 50% 50%, rgba(240, 249, 255, 0.5) 0px, transparent 70%);
-    background-attachment: fixed;
+    background-attachment: scroll;
 }
 
 [data-theme="light"] body::before {
     opacity: 0.05;
-    filter: blur(40px) saturate(140%);
+    filter: blur(20px) saturate(120%);
 }
 
 [data-theme="light"] body::after {
     background: radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, rgba(14, 165, 233, 0.06) 50%, transparent 70%);
+    filter: blur(24px);
 }
 
 /* ─── Light Theme — Sidebar & Navigation ──────────────────────────────────── */
 [data-theme="light"] .sidebar {
     background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(32px) saturate(200%);
-    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     border-right: 1px solid rgba(255, 255, 255, 0.8);
     box-shadow: 6px 0 32px rgba(14, 165, 233, 0.06), inset -1px 0 0 rgba(255, 255, 255, 0.9);
 }
@@ -1128,12 +1193,20 @@
 /* ─── Light Theme — Cards & Glassmorphism Containers ─────────────────────── */
 [data-theme="light"] .card {
     background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
     border-radius: var(--radius);
     box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
+}
+
+/* Kart içerisindeki alt elemanlarda nested blur GPU tıkanmasını önle */
+[data-theme="light"] .card .collapsible-section,
+[data-theme="light"] .card .toggle-row,
+[data-theme="light"] .card .phone-number-input {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 [data-theme="light"] .card:hover {
@@ -1458,7 +1531,7 @@
     border-radius: 10px;
     padding: 16px;
     text-align: center;
-    transition: all var(--transition);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
 
 .mini-card-value {
@@ -1586,8 +1659,10 @@ body::before {
     opacity: 0.125;
     pointer-events: none;
     z-index: 0;
-    filter: blur(38px) saturate(150%);
-    transform: rotate(-12deg);
+    filter: blur(28px) saturate(140%);
+    transform: rotate(-12deg) translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 body::after {
@@ -1600,7 +1675,10 @@ body::after {
     background: radial-gradient(circle, rgba(20, 184, 166, 0.16) 0%, rgba(56, 189, 248, 0.08) 45%, transparent 70%);
     pointer-events: none;
     z-index: 0;
-    filter: blur(50px);
+    filter: blur(36px);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 /* ─── Layout ────────────────────────────────────────────────────────────────── */
@@ -1911,7 +1989,7 @@ body::after {
     padding: 10px 14px;
     width: 100%;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-    transition: all var(--transition);
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
     -moz-appearance: textfield;
     appearance: textfield;
 }
@@ -1974,7 +2052,7 @@ select.form-input {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all var(--transition);
+    transition: border-color var(--transition), background-color var(--transition), transform var(--transition);
     user-select: none;
 }
 
@@ -2054,7 +2132,7 @@ select.form-input {
     font-weight: 600;
     border: none;
     cursor: pointer;
-    transition: all var(--transition);
+    transition: background-color var(--transition), transform var(--transition), box-shadow var(--transition), border-color var(--transition);
     text-decoration: none;
 }
 
@@ -2271,7 +2349,7 @@ select.form-input {
     border-top: 1px solid var(--glass-border-top);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    transition: all var(--transition);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
     animation: fadeSlideIn 0.4s ease both;
 }
 
@@ -2835,9 +2913,9 @@ select.form-input {
     margin-bottom: 2px;
 }
 
-.chip-ftr      { background: rgba(20,184,166,0.12); color: var(--accent); }
-.chip-aile     { background: rgba(99,102,241,0.12); color: #818CF8; }
-.chip-sistemik { background: rgba(245,158,11,0.12); color: var(--warning); }
+.audit-chip.chip-ftr, .table-chip.chip-ftr           { background: rgba(20,184,166,0.12); color: var(--accent); }
+.audit-chip.chip-aile, .table-chip.chip-aile         { background: rgba(99,102,241,0.12); color: #818CF8; }
+.audit-chip.chip-sistemik, .table-chip.chip-sistemik { background: rgba(245,158,11,0.12); color: var(--warning); }
 
 /* ─── Loading & Alerts ──────────────────────────────────────────────────────── */
 .loading-container {
@@ -2939,6 +3017,7 @@ select.form-input {
     -webkit-text-fill-color: transparent;
     animation: sedaGradientFlow 4s ease infinite;
     display: inline-block;
+    will-change: background-position;
 }
 
 [data-theme="light"] .seda-animated-flow-title {
@@ -2948,7 +3027,7 @@ select.form-input {
     background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: sedaGradientFlow 5s ease infinite;
-    filter: drop-shadow(0 2px 6px rgba(13, 148, 136, 0.15));
+    will-change: background-position;
 }
 
 .banner-subtext {
@@ -2976,7 +3055,7 @@ select.form-input {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
-    transition: all var(--transition);
+    transition: background-color var(--transition), border-color var(--transition), transform var(--transition);
 }
 
 .axis-pill:hover {
@@ -3032,7 +3111,7 @@ select.form-input {
     overflow: hidden;
     cursor: pointer;
     letter-spacing: 0.01em;
-    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-banner-glass::after {
@@ -3147,8 +3226,8 @@ select.form-input {
     border: 1px solid rgba(99, 102, 241, 0.2);
     border-top: 1px solid rgba(99, 102, 241, 0.3);
     color: #4338ca;
-    backdrop-filter: blur(20px) saturate(200%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
     box-shadow: 
         0 4px 16px -2px rgba(99, 102, 241, 0.14),
         0 1px 3px 0 rgba(15, 23, 42, 0.04),
@@ -3173,8 +3252,8 @@ select.form-input {
 }
 [data-theme="light"] .home-clinical-banner {
     background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 16px 40px -10px rgba(14, 165, 233, 0.1), inset 0 1.5px 1px 0 #FFFFFF;
@@ -3195,9 +3274,9 @@ select.form-input {
 }
 
 [data-theme="light"] .axis-pill {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 2px 8px rgba(14, 165, 233, 0.04), inset 0 1px 0 #FFFFFF;
@@ -3893,9 +3972,9 @@ select.form-input {
 }
 
 [data-theme="light"] .collapsible-section {
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(255, 255, 255, 0.8);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 4px 16px rgba(14, 165, 233, 0.04), inset 0 1px 0 #FFFFFF;
@@ -3918,16 +3997,16 @@ select.form-input {
 }
 
 [data-theme="light"] .toggle-row {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.80);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03), inset 0 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .toggle-row:hover {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-color: rgba(13, 148, 136, 0.35);
     border-top-color: #FFFFFF;
     box-shadow: 0 6px 18px rgba(13, 148, 136, 0.08), inset 0 1px 0 #FFFFFF;
@@ -3960,9 +4039,9 @@ select.form-input {
 [data-theme="light"] textarea.form-input,
 [data-theme="light"] .phone-country-select,
 [data-theme="light"] .phone-number-input {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(203, 213, 225, 0.8);
     border-top: 1.5px solid #FFFFFF;
     color: #0F172A;
@@ -5219,8 +5298,8 @@ select.form-input {
 /* ─── Light Theme — RAG (Klinik Kılavuz Danışmanı) ────────────────────────── */
 [data-theme="light"] .rag-topbar {
     background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.9);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 16px 40px -8px rgba(14, 165, 233, 0.10), 0 4px 16px -2px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
@@ -5248,8 +5327,8 @@ select.form-input {
 /* Chat Card Container */
 [data-theme="light"] .rag-chat-card {
     background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.9);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
@@ -5314,9 +5393,9 @@ select.form-input {
 }
 
 [data-theme="light"] .rag-ai-bubble {
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(226, 232, 240, 0.95);
     box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02);
 }
@@ -5472,8 +5551,8 @@ select.form-input {
 /* Evidence Sidebar */
 [data-theme="light"] .rag-evidence-sidebar {
     background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.9);
     border-top: 1.5px solid #FFFFFF;
     box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;

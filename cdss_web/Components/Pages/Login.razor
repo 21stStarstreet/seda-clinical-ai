@@ -47,206 +47,203 @@
                 </div>
             </div>
 
-            <!-- ─── Dinamik Seçili Yönlendirme Kartı (Yapılandırılmış Klinik Karar Matrisi) ─── -->
+            <!-- ─── Dinamik Seçili Yönlendirme Kartı (Pulsar Glass Klinik Karar Matrisi) ─── -->
             <div class="login-routing-card-container">
                 @if (_aktifYonlendirme == "sistemik")
                 {
                     <div class="login-routing-card card-sistemik fade-in">
-                        <div class="login-routing-card-header">
-                            <div class="login-routing-header-left">
-                                <div class="login-routing-icon-box box-sistemik">
+                        <!-- Kart Başlığı & Pulsar Glass Metrik Hapı -->
+                        <div class="routing-card-header">
+                            <div class="routing-header-main">
+                                <div class="routing-icon-capsule capsule-sistemik">
                                     <i class="ph-duotone ph-pill"></i>
                                 </div>
-                                <div class="login-routing-title-wrap">
-                                    <h3 class="login-routing-title">Sistemik &amp; Biyolojik Tedavi</h3>
-                                    <span class="login-routing-sub">Orta-Ağır Plak Psoriazis Karar Protokolü</span>
+                                <div class="routing-title-group">
+                                    <h3 class="routing-card-title">Sistemik &amp; Biyolojik Tedavi</h3>
+                                    <span class="routing-card-sub">Orta-Ağır Plak Psoriazis Karar Protokolü</span>
                                 </div>
                             </div>
-                            <div class="login-routing-score score-sistemik">F1 · 0.996 · %98.4 Doğruluk</div>
+                            <span class="routing-score-text">%98.4 Doğruluk</span>
                         </div>
 
-                        <p class="login-routing-desc">
+                        <!-- Klinik Özet -->
+                        <p class="routing-card-desc">
                             Konvansiyonel sistemik ilaçlar ve hedefe yönelik biyolojik ajanların (Anti-IL17, IL-23, TNF-α) endikasyon, kontrendikasyon ve basamaklı geçiş kriterlerini değerlendirir.
                         </p>
 
-                        <!-- Algoritmik Tetikleyici Eşikler (Chips) -->
-                        <div class="login-routing-triggers">
-                            <div class="triggers-heading">
-                                <i class="ph-bold ph-target"></i> Algoritmik Karar Eşikleri
+                        <!-- Algoritmik Tetikleyici Eşikler (Pulsar Glass Chips) -->
+                        <div class="routing-triggers-panel">
+                            <div class="triggers-panel-header">
+                                <i class="ph-bold ph-target"></i>
+                                <span>Algoritmik Karar Eşikleri</span>
                             </div>
-                            <div class="triggers-grid">
-                                <span class="trigger-chip chip-sistemik"><i class="ph-bold ph-check"></i> PASI &gt; 10</span>
-                                <span class="trigger-chip chip-sistemik"><i class="ph-bold ph-check"></i> DLQI &gt; 10</span>
-                                <span class="trigger-chip chip-sistemik"><i class="ph-bold ph-check"></i> BSA &gt; %10</span>
-                                <span class="trigger-chip chip-sistemik"><i class="ph-bold ph-warning-circle"></i> Dirençli Özel Bölge</span>
+                            <div class="triggers-chips-wrap">
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-check"></i> PASI &gt; 10</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-check"></i> DLQI &gt; 10</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-check"></i> BSA &gt; %10</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-warning-circle"></i> Dirençli Özel Bölge</span>
                             </div>
                         </div>
 
                         <!-- 2 Kolonlu Yapılandırılmış Klinik Matris -->
-                        <div class="login-routing-matrix">
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-sliders-horizontal"></i> İncelenen Klinik Belirteçler
+                        <div class="routing-matrix-grid">
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-sliders-horizontal"></i>
+                                    <span>İncelenen Klinik Belirteçler</span>
                                 </div>
-                                <ul class="matrix-list">
-                                    <li><i class="ph-bold ph-caret-right"></i> Lezyon yaygınlığı ve şiddeti (PASI/BSA)</li>
+                                <ul class="matrix-tile-list">
+                                    <li><i class="ph-bold ph-caret-right"></i> Lezyon yaygınlığı ve şiddeti (PASI / BSA)</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Yaşam kalitesi ve psikososyal etki (DLQI)</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Önceki tedavi yanıtı ve basamak direnci</li>
                                 </ul>
                             </div>
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-shield-check"></i> Hedef Çıktı &amp; Standart
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-shield-check"></i>
+                                    <span>Hedef Çıktı &amp; Standart</span>
                                 </div>
-                                <ul class="matrix-list">
+                                <ul class="matrix-tile-list">
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Biyolojik/Sistemik basamak uygunluk onayı</li>
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Karaciğer, böbrek ve enfeksiyon güvenlik denetimi</li>
                                 </ul>
-                                <div class="matrix-guidelines">
-                                    <span class="badge-guideline">🇹🇷 TR PSOKİD 2025</span>
-                                    <span class="badge-guideline">🇪🇺 EuroGuiDerm</span>
+                                <div class="matrix-guideline-tags">
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> 🇹🇷 TR PSOKİD 2025</span>
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> 🇪🇺 EuroGuiDerm</span>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Doğrulama & Güvenilirlik Alt Bilgisi -->
-                        <div class="login-routing-footer">
-                            <i class="ph-bold ph-certificate"></i>
-                            <span>DCPR &amp; 104 Haftalık Gerçek Yaşam Kohortu ile Eğitildi ve Doğrulandı</span>
                         </div>
                     </div>
                 }
                 else if (_aktifYonlendirme == "ftr")
                 {
                     <div class="login-routing-card card-ftr fade-in">
-                        <div class="login-routing-card-header">
-                            <div class="login-routing-header-left">
-                                <div class="login-routing-icon-box box-ftr">
+                        <!-- Kart Başlığı & Pulsar Glass Metrik Hapı -->
+                        <div class="routing-card-header">
+                            <div class="routing-header-main">
+                                <div class="routing-icon-capsule capsule-ftr">
                                     <i class="ph-duotone ph-person-arms-spread"></i>
                                 </div>
-                                <div class="login-routing-title-wrap">
-                                    <h3 class="login-routing-title">Fizik Tedavi &amp; Romatoloji</h3>
-                                    <span class="login-routing-sub">Erken Psöriatik Artrit (PsA) &amp; Eklem Hasarı Protokolü</span>
+                                <div class="routing-title-group">
+                                    <h3 class="routing-card-title">Fizik Tedavi &amp; Romatoloji</h3>
+                                    <span class="routing-card-sub">Erken Psöriatik Artrit (PsA) &amp; Eklem Hasarı Protokolü</span>
                                 </div>
                             </div>
-                            <div class="login-routing-score score-ftr">F1 · 0.972 · %96.8 Doğruluk</div>
+                            <span class="routing-score-text">%97.8 Doğruluk</span>
                         </div>
 
-                        <p class="login-routing-desc">
+                        <!-- Klinik Özet -->
+                        <p class="routing-card-desc">
                             Psöriatik artrit (PsA), aksiyel tutulum ve periferik eklem hasarını kalıcı erozyon gelişmeden önce erken evrede tespit ederek multidisipliner konsültasyon ihtiyacını belirler.
                         </p>
 
-                        <!-- Algoritmik Tetikleyici Eşikler (Chips) -->
-                        <div class="login-routing-triggers">
-                            <div class="triggers-heading">
-                                <i class="ph-bold ph-target"></i> Algoritmik Karar Eşikleri
+                        <!-- Algoritmik Tetikleyici Eşikler (Pulsar Glass Chips) -->
+                        <div class="routing-triggers-panel">
+                            <div class="triggers-panel-header">
+                                <i class="ph-bold ph-target"></i>
+                                <span>Algoritmik Karar Eşikleri</span>
                             </div>
-                            <div class="triggers-grid">
-                                <span class="trigger-chip chip-ftr"><i class="ph-bold ph-clock"></i> Sabah Tutukluğu &gt; 30 dk</span>
-                                <span class="trigger-chip chip-ftr"><i class="ph-bold ph-check"></i> CASPAR &ge; 3</span>
-                                <span class="trigger-chip chip-ftr"><i class="ph-bold ph-warning-circle"></i> Daktilit (Sosis Parmak)</span>
-                                <span class="trigger-chip chip-ftr"><i class="ph-bold ph-warning-circle"></i> Tırnak Tutulumu (NAPSI)</span>
+                            <div class="triggers-chips-wrap">
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-clock"></i> Sabah Tutukluğu &gt; 30 dk</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-check"></i> CASPAR &ge; 3</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-warning-circle"></i> Daktilit (Sosis Parmak)</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-warning-circle"></i> Tırnak Tutulumu (NAPSI)</span>
                             </div>
                         </div>
 
                         <!-- 2 Kolonlu Yapılandırılmış Klinik Matris -->
-                        <div class="login-routing-matrix">
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-sliders-horizontal"></i> İncelenen Klinik Belirteçler
+                        <div class="routing-matrix-grid">
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-sliders-horizontal"></i>
+                                    <span>İncelenen Klinik Belirteçler</span>
                                 </div>
-                                <ul class="matrix-list">
+                                <ul class="matrix-tile-list">
                                     <li><i class="ph-bold ph-caret-right"></i> İnflamatuar periferik ve aksiyel eklem ağrısı</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Sabah tutukluğu süresi ve daktilit öyküsü</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Tırnak distrofisi ve matriks tutulumu (NAPSI)</li>
                                 </ul>
                             </div>
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-shield-check"></i> Hedef Çıktı &amp; Standart
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-shield-check"></i>
+                                    <span>Hedef Çıktı &amp; Standart</span>
                                 </div>
-                                <ul class="matrix-list">
+                                <ul class="matrix-tile-list">
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Erken Romatoloji/FTR konsültasyon sevk önceliği</li>
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Eklem hasarını önleyici hedefe yönelik tedavi planı</li>
                                 </ul>
-                                <div class="matrix-guidelines">
-                                    <span class="badge-guideline">CASPAR Kriterleri</span>
-                                    <span class="badge-guideline">EULAR / GRAPPA 2024</span>
+                                <div class="matrix-guideline-tags">
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> CASPAR Kriterleri</span>
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> EULAR / GRAPPA 2024</span>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Doğrulama & Güvenilirlik Alt Bilgisi -->
-                        <div class="login-routing-footer">
-                            <i class="ph-bold ph-certificate"></i>
-                            <span>EULAR / GRAPPA Klinik Konsensüs Karar Ağacı ile Doğrulandı</span>
                         </div>
                     </div>
                 }
                 else
                 {
                     <div class="login-routing-card card-aile fade-in">
-                        <div class="login-routing-card-header">
-                            <div class="login-routing-header-left">
-                                <div class="login-routing-icon-box box-aile">
+                        <!-- Kart Başlığı & Pulsar Glass Metrik Hapı -->
+                        <div class="routing-card-header">
+                            <div class="routing-header-main">
+                                <div class="routing-icon-capsule capsule-aile">
                                     <i class="ph-duotone ph-heartbeat"></i>
                                 </div>
-                                <div class="login-routing-title-wrap">
-                                    <h3 class="login-routing-title">Aile Hekimliği &amp; Komorbidite</h3>
-                                    <span class="login-routing-sub">Kardiyometabolik Risk &amp; Birinci Basamak İzlemi</span>
+                                <div class="routing-title-group">
+                                    <h3 class="routing-card-title">Aile Hekimliği &amp; Komorbidite</h3>
+                                    <span class="routing-card-sub">Kardiyometabolik Risk &amp; Birinci Basamak İzlemi</span>
                                 </div>
                             </div>
-                            <div class="login-routing-score score-aile">F1 · 0.954 · %95.1 Doğruluk</div>
+                            <span class="routing-score-text">%96.1 Doğruluk</span>
                         </div>
 
-                        <p class="login-routing-desc">
+                        <!-- Klinik Özet -->
+                        <p class="routing-card-desc">
                             Psoriazisin kronik sistemik inflamatuar yapısı gereği tetiklenen kardiyometabolik riskleri, karaciğer fonksiyonlarını ve metabolik sendrom bileşenlerini koordine eder.
                         </p>
 
-                        <!-- Algoritmik Tetikleyici Eşikler (Chips) -->
-                        <div class="login-routing-triggers">
-                            <div class="triggers-heading">
-                                <i class="ph-bold ph-target"></i> Algoritmik Karar Eşikleri
+                        <!-- Algoritmik Tetikleyici Eşikler (Pulsar Glass Chips) -->
+                        <div class="routing-triggers-panel">
+                            <div class="triggers-panel-header">
+                                <i class="ph-bold ph-target"></i>
+                                <span>Algoritmik Karar Eşikleri</span>
                             </div>
-                            <div class="triggers-grid">
-                                <span class="trigger-chip chip-aile"><i class="ph-bold ph-warning"></i> VKİ &ge; 30 kg/m²</span>
-                                <span class="trigger-chip chip-aile"><i class="ph-bold ph-warning"></i> LDL &gt; 130 mg/dL</span>
-                                <span class="trigger-chip chip-aile"><i class="ph-bold ph-check"></i> Aktif Sigara</span>
-                                <span class="trigger-chip chip-aile"><i class="ph-bold ph-heart"></i> Kardiyovasküler Risk</span>
+                            <div class="triggers-chips-wrap">
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-warning"></i> VKİ &ge; 30 kg/m²</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-warning"></i> LDL &gt; 130 mg/dL</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-check"></i> Aktif Sigara</span>
+                                <span class="pg-trigger-chip seda-flow-chip"><i class="ph-bold ph-heart"></i> Kardiyovasküler Risk</span>
                             </div>
                         </div>
 
                         <!-- 2 Kolonlu Yapılandırılmış Klinik Matris -->
-                        <div class="login-routing-matrix">
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-sliders-horizontal"></i> İncelenen Klinik Belirteçler
+                        <div class="routing-matrix-grid">
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-sliders-horizontal"></i>
+                                    <span>İncelenen Klinik Belirteçler</span>
                                 </div>
-                                <ul class="matrix-list">
+                                <ul class="matrix-tile-list">
                                     <li><i class="ph-bold ph-caret-right"></i> Vücut Kitle İndeksi (VKİ) ve obezite evresi</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Serum lipid paneli (LDL/HDL/Trigliserit)</li>
                                     <li><i class="ph-bold ph-caret-right"></i> Karaciğer enzimleri (ALT/AST), sigara ve yaş</li>
                                 </ul>
                             </div>
-                            <div class="matrix-col">
-                                <div class="matrix-title">
-                                    <i class="ph-bold ph-shield-check"></i> Hedef Çıktı &amp; Standart
+                            <div class="matrix-tile">
+                                <div class="matrix-tile-header">
+                                    <i class="ph-bold ph-shield-check"></i>
+                                    <span>Hedef Çıktı &amp; Standart</span>
                                 </div>
-                                <ul class="matrix-list">
+                                <ul class="matrix-tile-list">
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Birinci basamak metabolik takip ve statin protokolü</li>
                                     <li><i class="ph-bold ph-arrow-circle-right"></i> Sistemik ilaç hepatotoksisite ve risk yönetimi</li>
                                 </ul>
-                                <div class="matrix-guidelines">
-                                    <span class="badge-guideline">Türkiye KMR Kılavuzu</span>
-                                    <span class="badge-guideline">DSÖ Kardiyometabolik</span>
+                                <div class="matrix-guideline-tags">
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> Türkiye KMR Kılavuzu</span>
+                                    <span class="guideline-tag"><i class="ph-bold ph-bookmark-simple"></i> DSÖ Kardiyometabolik</span>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Doğrulama & Güvenilirlik Alt Bilgisi -->
-                        <div class="login-routing-footer">
-                            <i class="ph-bold ph-certificate"></i>
-                            <span>Kardiyometabolik Risk Yönetimi Algoritması ile Doğrulandı</span>
                         </div>
                     </div>
                 }
@@ -355,241 +352,6 @@
         </div>
     </div>
 </div>
-
-<style>
-    .login-routing-slider-wrap {
-        margin-bottom: 16px;
-        width: 100%;
-        max-width: 520px;
-    }
-    .login-routing-track.rag-segmented-track {
-        width: 100%;
-        display: flex;
-        padding: 3px;
-        border-radius: 13px;
-        box-sizing: border-box;
-    }
-    .login-routing-track .rag-pill-btn {
-        flex: 1;
-        padding: 8px 10px;
-        min-width: 0;
-        font-size: 12.5px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        cursor: pointer;
-    }
-    .login-routing-track .rag-pill-label {
-        gap: 6px;
-        white-space: nowrap;
-    }
-    .login-routing-track .rag-pill-label i {
-        font-size: 14.5px;
-    }
-    .login-routing-card-container {
-        width: 100%;
-        max-width: 530px;
-    }
-    .login-routing-card {
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(24px) saturate(190%);
-        -webkit-backdrop-filter: blur(24px) saturate(190%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-top: 1.5px solid rgba(255, 255, 255, 0.25);
-        border-radius: 16px;
-        padding: 22px 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.45);
-        box-sizing: border-box;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .card-sistemik { border-left: 4px solid #10b981; }
-    .card-ftr { border-left: 4px solid #0ea5e9; }
-    .card-aile { border-left: 4px solid #a855f7; }
-    .login-routing-card-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-    .login-routing-header-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-        min-width: 0;
-    }
-    .login-routing-icon-box {
-        width: 42px;
-        height: 42px;
-        border-radius: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        flex-shrink: 0;
-    }
-    .box-sistemik {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .box-ftr {
-        background: rgba(14, 165, 233, 0.15);
-        color: #38bdf8;
-        border: 1px solid rgba(14, 165, 233, 0.3);
-    }
-    .box-aile {
-        background: rgba(168, 85, 247, 0.15);
-        color: #c084fc;
-        border: 1px solid rgba(168, 85, 247, 0.3);
-    }
-    .login-routing-title-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-    }
-    .login-routing-title {
-        font-size: 15.5px;
-        font-weight: 700;
-        color: #ffffff;
-        margin: 0;
-        letter-spacing: -0.2px;
-    }
-    .login-routing-sub {
-        font-size: 11.5px;
-        color: #94a3b8;
-        font-weight: 500;
-    }
-    .login-routing-desc {
-        font-size: 13px;
-        color: #cbd5e1;
-        line-height: 1.6;
-        margin: 0;
-    }
-    .login-routing-specs {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        padding-top: 12px;
-        margin-top: 2px;
-    }
-    .login-routing-spec-row {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
-        font-size: 12px;
-        line-height: 1.5;
-    }
-    .spec-label {
-        width: 140px;
-        flex-shrink: 0;
-        color: #94a3b8;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11.5px;
-    }
-    .spec-label i {
-        font-size: 13px;
-        opacity: 0.85;
-    }
-    .spec-val {
-        flex: 1;
-        color: #e2e8f0;
-    }
-    .spec-val.highlight-sistemik {
-        color: #34d399;
-        font-weight: 600;
-    }
-    .spec-val.highlight-ftr {
-        color: #38bdf8;
-        font-weight: 600;
-    }
-    .spec-val.highlight-aile {
-        color: #c084fc;
-        font-weight: 600;
-    }
-    .login-routing-score {
-        font-size: 11px;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 6px;
-        letter-spacing: 0.05em;
-        flex-shrink: 0;
-    }
-    .score-sistemik {
-        background: rgba(16, 185, 129, 0.18);
-        color: #34d399;
-        border: 1px solid rgba(16, 185, 129, 0.4);
-    }
-    .score-ftr {
-        background: rgba(14, 165, 233, 0.18);
-        color: #38bdf8;
-        border: 1px solid rgba(14, 165, 233, 0.4);
-    }
-    .score-aile {
-        background: rgba(168, 85, 247, 0.18);
-        color: #c084fc;
-        border: 1px solid rgba(168, 85, 247, 0.4);
-    }
-
-    /* Light Theme Overrides */
-    [data-theme="light"] .login-routing-card {
-        background: rgba(255, 255, 255, 0.88);
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-top: 1.5px solid #ffffff;
-        box-shadow: 0 16px 36px -8px rgba(14, 165, 233, 0.12), inset 0 1px 0 #ffffff;
-    }
-    [data-theme="light"] .card-sistemik { border-left: 4px solid #059669; }
-    [data-theme="light"] .card-ftr { border-left: 4px solid #0284c7; }
-    [data-theme="light"] .card-aile { border-left: 4px solid #7c3aed; }
-    [data-theme="light"] .box-sistemik {
-        background: rgba(16, 185, 129, 0.12);
-        color: #059669;
-        border-color: rgba(16, 185, 129, 0.25);
-    }
-    [data-theme="light"] .box-ftr {
-        background: rgba(14, 165, 233, 0.12);
-        color: #0284c7;
-        border-color: rgba(14, 165, 233, 0.25);
-    }
-    [data-theme="light"] .box-aile {
-        background: rgba(168, 85, 247, 0.12);
-        color: #7c3aed;
-        border-color: rgba(168, 85, 247, 0.25);
-    }
-    [data-theme="light"] .login-routing-title { color: #0f172a; }
-    [data-theme="light"] .login-routing-sub { color: #64748b; }
-    [data-theme="light"] .login-routing-desc { color: #334155; }
-    [data-theme="light"] .login-routing-specs { border-top-color: #e2e8f0; }
-    [data-theme="light"] .spec-label { color: #64748b; }
-    [data-theme="light"] .spec-val { color: #1e293b; }
-    [data-theme="light"] .spec-val.highlight-sistemik { color: #059669; }
-    [data-theme="light"] .spec-val.highlight-ftr { color: #0284c7; }
-    [data-theme="light"] .spec-val.highlight-aile { color: #7c3aed; }
-    [data-theme="light"] .score-sistemik {
-        background: rgba(16, 185, 129, 0.12);
-        color: #059669;
-        border-color: rgba(16, 185, 129, 0.3);
-    }
-    [data-theme="light"] .score-ftr {
-        background: rgba(14, 165, 233, 0.12);
-        color: #0284c7;
-        border-color: rgba(14, 165, 233, 0.3);
-    }
-    [data-theme="light"] .score-aile {
-        background: rgba(168, 85, 247, 0.12);
-        color: #7c3aed;
-        border-color: rgba(168, 85, 247, 0.3);
-    }
-</style>
 
 @code {
     private class LoginForm

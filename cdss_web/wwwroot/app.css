@@ -4074,20 +4074,29 @@ select.form-input {
     box-sizing: border-box;
 }
 
-.rag-topbar {
+.rag-topbar,
+.rag-topbar.card {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    padding: 16px 24px !important;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-border-top);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
     flex-shrink: 0;
     flex-wrap: wrap;
     gap: 14px;
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+.rag-topbar:hover {
+    border-color: var(--border-light);
+    border-top-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .rag-topbar-info {
@@ -4544,17 +4553,27 @@ select.form-input {
     box-sizing: border-box;
 }
 
-.rag-chat-card {
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+.rag-chat-card,
+.rag-chat-card.card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-border-top);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    padding: 0 !important;
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+.rag-chat-card:hover {
+    border-color: var(--border-light);
+    border-top-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .rag-chat-scroll {
@@ -4970,8 +4989,11 @@ select.form-input {
 
 .rag-input-dock {
     padding: 16px 20px;
-    background: rgba(15, 23, 42, 0.85);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 18, 36, 0.45);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -4988,9 +5010,10 @@ select.form-input {
     height: 48px;
     min-height: 48px;
     max-height: 48px;
-    background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid var(--border);
+    border-top: 1.5px solid var(--border-light);
+    border-radius: var(--radius-sm);
     padding: 13px 18px;
     font-size: 14px;
     color: #f8fafc;
@@ -5001,12 +5024,14 @@ select.form-input {
     transition: all 0.2s ease;
     box-sizing: border-box;
     overflow-y: auto;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .rag-textarea:focus {
-    border-color: #14b8a6;
-    background: rgba(30, 41, 59, 0.95);
-    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+    border-color: var(--accent);
+    border-top-color: #5eead4;
+    background: rgba(15, 23, 42, 0.85);
+    box-shadow: 0 0 0 3px var(--accent-glow), inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .rag-textarea:disabled {
@@ -5102,17 +5127,27 @@ select.form-input {
     margin-left: auto;
 }
 
-.rag-evidence-sidebar {
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+.rag-evidence-sidebar,
+.rag-evidence-sidebar.card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-border-top);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    padding: 0 !important;
+    transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+.rag-evidence-sidebar:hover {
+    border-color: var(--border-light);
+    border-top-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .rag-evidence-header {
@@ -5120,8 +5155,9 @@ select.form-input {
     align-items: center;
     justify-content: space-between;
     padding: 18px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(30, 41, 59, 0.4);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
 }
 
@@ -5164,20 +5200,24 @@ select.form-input {
 }
 
 .rag-evidence-card {
-    background: rgba(30, 41, 59, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(22, 33, 56, 0.55);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.18);
     border-left: 4px solid #14b8a6;
     border-radius: 12px;
     padding: 14px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .rag-evidence-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .border-tr { border-left-color: #ef4444; }
@@ -5297,12 +5337,20 @@ select.form-input {
 
 /* ─── Light Theme — RAG (Klinik Kılavuz Danışmanı) ────────────────────────── */
 [data-theme="light"] .rag-topbar {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
-    box-shadow: 0 16px 40px -8px rgba(14, 165, 233, 0.10), 0 4px 16px -2px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
+    border-radius: var(--radius);
+    box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+[data-theme="light"] .rag-topbar:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+    border-top-color: #FFFFFF;
+    box-shadow: 0 24px 55px -8px rgba(13, 148, 136, 0.14), inset 0 1.5px 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-badge-icon {
@@ -5326,12 +5374,20 @@ select.form-input {
 
 /* Chat Card Container */
 [data-theme="light"] .rag-chat-card {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
+    border-radius: var(--radius);
     box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+[data-theme="light"] .rag-chat-card:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+    border-top-color: #FFFFFF;
+    box-shadow: 0 24px 55px -8px rgba(13, 148, 136, 0.14), inset 0 1.5px 1px 0 #FFFFFF;
 }
 
 /* Welcome Screen */
@@ -5499,21 +5555,25 @@ select.form-input {
 
 /* Input Dock */
 [data-theme="light"] .rag-input-dock {
-    background: rgba(248, 250, 252, 0.88);
-    border-top: 1px solid #E2E8F0;
+    background: rgba(248, 250, 252, 0.65);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border-top: 1px solid rgba(14, 165, 233, 0.12);
+    box-shadow: inset 0 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-textarea {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
+    border-radius: var(--radius-sm);
     color: #0F172A;
-    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
 [data-theme="light"] .rag-textarea:focus {
     border-color: #0D9488;
     background: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15), inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15), 0 2px 8px rgba(13, 148, 136, 0.08);
 }
 
 [data-theme="light"] .rag-textarea::placeholder {
@@ -5550,17 +5610,26 @@ select.form-input {
 
 /* Evidence Sidebar */
 [data-theme="light"] .rag-evidence-sidebar {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 1.5px solid #FFFFFF;
+    border-radius: var(--radius);
     box-shadow: 0 20px 50px -10px rgba(14, 165, 233, 0.12), 0 6px 20px -4px rgba(15, 23, 42, 0.03), inset 0 1.5px 1px 0 #FFFFFF;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+[data-theme="light"] .rag-evidence-sidebar:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+    border-top-color: #FFFFFF;
+    box-shadow: 0 24px 55px -8px rgba(13, 148, 136, 0.14), inset 0 1.5px 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-evidence-header {
-    background: rgba(248, 250, 252, 0.85);
-    border-bottom: 1px solid #E2E8F0;
+    background: rgba(248, 250, 252, 0.65);
+    border-bottom: 1px solid rgba(14, 165, 233, 0.12);
+    box-shadow: inset 0 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-evidence-title {
@@ -5578,14 +5647,17 @@ select.form-input {
 }
 
 [data-theme="light"] .rag-evidence-card {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    background: rgba(255, 255, 255, 0.80);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-top: 1.5px solid #FFFFFF;
     border-left: 4px solid #0D9488;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 4px 16px rgba(14, 165, 233, 0.08), inset 0 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-evidence-card:hover {
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 8px 22px rgba(14, 165, 233, 0.14), inset 0 1px 0 #FFFFFF;
 }
 
 [data-theme="light"] .rag-evidence-card.border-tr {

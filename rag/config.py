@@ -49,10 +49,10 @@ TASK_TYPE_QUERY = "RETRIEVAL_QUERY"
 # ─── Retrieval ───────────────────────────────────────────────────────────────
 TOP_K = 5
 # ChromaDB cosine distance: 0 = aynı, 2 = zıt
-# 0.65 üzeri → ilgisiz soru → "Bulunamadı" yanıtı
-# Not: 0.75'ten 0.65'e düşürüldü — önceki değer çok geniş eşik sağlıyordu;
-# FTR sorguları için biyolojik ajan/topikal tedavi sayfaları yanlış olarak eşleşiyordu.
-MAX_DISTANCE_THRESHOLD = 0.65
+# Kapsam dışı / alakasız soru eşiği:
+# Sistematik ROC taraması (45 soruluk Golden Set) sonucunda belirlenen optimal aralık: 0.30 - 0.38 (F1: 0.955 sabit).
+# Konsültasyon ve doğal klinik soruların (0.31-0.34) haksız elenmesini önlemek için güvenli operasyonel eşik: 0.35.
+MAX_DISTANCE_THRESHOLD = 0.35
 
 # ─── Generation ──────────────────────────────────────────────────────────────
 # Birincil model: gemini-3.1-flash-lite-preview — Yüksek kota kapasitesi, hızlı yanıt (~3s).

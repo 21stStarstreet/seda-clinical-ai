@@ -86,3 +86,6 @@ Library/
 
 # Standalone Playground & Showcase
 pulsar_glass/
+
+#reports
+reports/

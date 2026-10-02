@@ -10,7 +10,7 @@
 <div class="rag-workspace fade-in">
 
     <!-- ── ÜST BAR / HEADER ───────────────────────────────────────────── -->
-    <header class="rag-topbar">
+    <header class="rag-topbar card">
         <div class="rag-topbar-info">
             <div class="rag-badge-icon">
                 <i class="ph-duotone ph-books"></i>
@@ -50,7 +50,7 @@
     <div class="rag-grid-layout">
 
         <!-- SOL: SOHBET & DANIŞMA PANELİ -->
-        <section class="rag-chat-card">
+        <section class="rag-chat-card card">
 
             <!-- Mesaj Listesi -->
             <div class="rag-chat-scroll" id="ragChatScroll">
@@ -228,7 +228,7 @@
         </section>
 
         <!-- SAĞ: RESMİ KILAVUZ KANITLARI PANELİ -->
-        <aside class="rag-evidence-sidebar">
+        <aside class="rag-evidence-sidebar card">
             <div class="rag-evidence-header">
                 <div class="rag-evidence-title">
                     <i class="ph-duotone ph-files"></i>
@@ -301,7 +301,7 @@
 
     private readonly List<HizliSoru> _hizliSorular = new()
     {
-        new("PASI & Şiddet Eşikleri", "PAŞİ > 10 ve DYKİ > 10 eşik değerleri ve tedavi basamağı nedir?", "ph-duotone ph-chart-line-up"),
+        new("PASI & Şiddet Eşikleri", "PASI > 10 ve DLQI > 10 eşik değerleri ve tedavi basamağı nedir?", "ph-duotone ph-chart-line-up"),
         new("Sistemik Tedavi Fazları", "Psoriaziste indüksiyon ve idame tedavi fazlarının süreleri nelerdir?", "ph-duotone ph-pill"),
         new("Biyolojik Öncesi Tarama", "Biyolojik ajan başlamadan önce zorunlu olan laboratuvar ve taramalar nelerdir?", "ph-duotone ph-dna"),
         new("Psoriatik Artrit & FTR", "Sabah tutukluğu ve eklem tutulumunda romatoloji/FTR sevk kriterleri nelerdir?", "ph-duotone ph-person-simple-walk"),
@@ -322,6 +322,12 @@
             try
             {
                 await JS.InvokeVoidAsync("initSegmentedSlider", "ragSegmentedTrack", "ragActiveSlider");
+            }
+            catch { }
+
+            try
+            {
+                await JS.InvokeVoidAsync("setupChatTextArea", "ragTextArea");
             }
             catch { }
         }
@@ -355,6 +361,12 @@
         if (string.IsNullOrWhiteSpace(soru) || _yukleniyor) return;
 
         _soruMetni = "";
+        try
+        {
+            await JS.InvokeVoidAsync("clearChatInput", "ragTextArea");
+        }
+        catch { }
+
         _yukleniyor = true;
 
         // Kullanıcı sorusunu ekle
@@ -377,6 +389,12 @@
         // Yükleniyor balonunu kaldır
         _mesajlar.Remove(loadingMsg);
         _yukleniyor = false;
+        _soruMetni = "";
+        try
+        {
+            await JS.InvokeVoidAsync("clearChatInput", "ragTextArea");
+        }
+        catch { }
 
         if (error is not null)
         {

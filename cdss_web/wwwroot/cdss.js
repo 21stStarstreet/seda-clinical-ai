@@ -799,4 +799,29 @@ window.updateSegmentedSlider = function (trackId, sliderId) {
     }
 };
 
+// ─── Kılavuz Danışmanı Chat Input & Klavye Yönetimi ───────────────────────────
+window.setupChatTextArea = function (id) {
+    const ta = document.getElementById(id);
+    if (!ta || ta._hasChatListener) return;
+    ta._hasChatListener = true;
+
+    ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Yeni satır (\n) eklenmesini KESİNLİKLE engelle
+            const btn = document.querySelector('.rag-submit-btn');
+            if (btn && !btn.disabled) {
+                btn.click();
+            }
+        }
+    });
+};
+
+window.clearChatInput = function (id) {
+    const ta = document.getElementById(id);
+    if (ta) {
+        ta.value = '';
+    }
+};
+
+
 

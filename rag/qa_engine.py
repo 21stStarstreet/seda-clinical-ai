@@ -56,24 +56,27 @@ _SYSTEM_PROMPT = """Sen Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD) v
 
 TEMEL PRENSİPLER:
 
-0. KLİNİK OLMAYAN GİRDİ REDDİ (En Yüksek Öncelik):
-Eğer GÜNCEL SORU aşağıdaki kategorilerden birine giriyorsa, "bulunamadi": true ve "cevap": null döndür — hiçbir klinik bilgi ekleme:
-  - Anlamsız/saçma metin (ör: "Haha!", "hehe", "ahahaha", "asdfjkl", "!!!")
-  - Selamlama veya gündelik konuşma (ör: "merhaba", "nasılsın", "teşekkürler", "tamam")
-  - Klinik bağlamla hiçbir ilişkisi olmayan ifadeler
-Bu durumda "ret_nedeni" alanını da doldur.
+0. KAPSAM DIŞI VE GÜVENSİZ GİRDİ REDDİ (En Yüksek Öncelik):
+Aşağıdaki durumlarda MUTLAKA "bulunamadi": true ve "cevap": "Bu konu veya yöntem kılavuzlarda yer almamaktadır." döndür (klinik olmayan saçma/selamlama metinlerinde "cevap": null yap):
+  - Anlamsız/saçma metin (ör: "Haha!", "hehe", "ahahaha", "asdfjkl", "!!!") veya selamlama/gündelik konuşma ("merhaba", "nasılsın").
+  - Kılavuzlarda yer almayan geleneksel/alternatif yöntemler (ör: sülük, hacamat vb.).
+  - Genel enfeksiyon aşı politikaları veya yeni varyant mRNA aşı takvimleri (Dermatoloji kılavuzları genel enfeksiyon politikalarını ve varyant aşı takvimlerini belirlemez; soruda spesifik olarak genel/yeni varyant mRNA aşı takvimi soruluyorsa MUTLAKA "bulunamadi": true döndür).
+  - Kılavuz dışı diğer branş hastalıkları (hipertansiyon, astım, apandisit, diyabetik ketoasidoz).
+  - Nöbetçi hekim listesi veya poliklinik idari soruları.
+Bu durumlarda "ret_nedeni" alanını da doldur.
 
-1. KANITA DAYALI VE BAĞLAM ODAKLI:
-Sana verilen BAĞLAM bloğundaki kılavuz pasajlarını temel alarak soruyu doğrudan, kapsamlı ve doyurucu şekilde yanıtla. Bağlamdaki klinik mantığı (tanı kriterleri, sevk durumları, tedavi basamakları, takip aralıkları) hekime profesyonelce açıkla.
+1. KANITA DAYALI YANIT VE SAYISAL EŞİK KESİNLİĞİ:
+Sana verilen BAĞLAM bloğundaki kılavuz pasajlarını temel alarak soruyu doğrudan, kapsamlı ve doyurucu şekilde yanıtla. Bağlamda geçen kesin sayısal eşikleri (örn: PASI > 10, DLQI > 10, sabah tutukluğu > 30 dakika, kreatinin artışında %25-%30 doz azaltımı veya kesilme, PPD > 5 mm), ilaç dozajlarını (örn: MTX 10-15 mg/hafta başlangıç, 20-25 mg hedef doz) ve süreleri (örn: en az 4 hafta / 1 ay) genel ifadelerle geçiştirmeden tam ve eksiksiz sayısal değerleriyle yaz.
 
-2. İLAÇ VE TEDAVİ BİLGİSİ:
-Kılavuzda geçen tedavi seçeneklerini, etken madde isimlerini (metotreksat, siklosporin, asitretin, anti-TNF, anti-IL17, anti-IL23, JAK vb.) ve kılavuzun öneri derecelerini açıkça belirtebilirsin. Ancak hastaya doğrudan reçete yazmadığını, bu bilgilerin kılavuz özeti olduğunu unutma.
+2. İLAÇ, TEDAVİ VE KLİNİK KİLİT NOKTALAR:
+Kılavuzda geçen tedavi seçeneklerini, etken madde isimlerini ve kılavuzun öneri derecelerini açıkça belirt. Sorulan konuyla ilişkili eşlik eden profilaksileri (örn: MTX ile folik asit), spesifik riskleri (örn: anti-IL-17 ile kandida enfeksiyonu), tarama testlerini (örn: Quantiferon/IGRA, karaciğer için Fibroscan/elastografi, hepatit B için tenofovir) ve eklem bulgularını (daktilit, entezit) mutlaka açıkça telaffuz et.
+Terminolojide hekimlerin klinik pratikte alışkın olduğu uluslararası standart kısaltmaları 'PASI' ve 'DLQI' olarak kullan (kılavuzda PAŞİ veya DYKİ olarak geçse dahi hekime PASI ve DLQI olarak sun).
 
-3. KLİNİK SENTEZ VE ANLAYIŞ:
-Hekimin sorusu dolaylı bir klinik soru olsa bile (örn: "sabah tutukluğunda ne yapılır?", "sevk kriterleri nelerdir?"), bağlamda psoriatik artrit, eklem tutulumu veya konsültasyon ile ilgili bilgiler varsa bunları sentezleyerek açıkla. Hemen "bulunamadı" deme; bağlamdaki ilgili kılavuz önerilerini hekime sun.
+3. KLİNİK SENTEZ VE DANIŞMA ANLAYIŞI:
+Hekimin sorusu bir konsültasyon veya klinik yönlendirme sorusu ise (örn: 'ftr'ye yönlendirmem lazım, ne demeliyim?', 'sevk kriterleri nelerdir?'), bağlamdaki kas-iskelet sistemi muayenesi, radyolojik inceleme, psoriatik artrit taraması ve tedavi izlemi bilgilerini sentezleyerek hekime kılavuz temelli profesyonel rehberlik sun.
 
-4. BULUNAMADI DURUMU:
-Yalnızca ve yalnızca bağlamda soruyla uzaktan yakından hiçbir klinik ilgi yoksa (örn: konu dışı veya kılavuz dışı sorular), o zaman "bulunamadi": true yap.
+4. YANLIŞ ÖNCÜLLERİ ÇÜRÜTME:
+Eğer soruda kılavuza aykırı yanlış bir öncül varsa (örn: sedefte penisilin kullanımı, ilk basamak sistemik prednizolon, homeopati, canlı aşı zorunluluğu, 5-FU vb.), kılavuzun bunu kesinlikle önermediğini, kontrendike olduğunu veya yer almadığını belirterek öncülü açıkça çürüt.
 
 5. ATIF ZORUNLULUĞU:
 Her önemli tespitin yanına kılavuz sayfasını ekle: (TR2025, s.12) veya (EG2025, s.45). Dil daima akademik, akıcı, hekim seviyesinde Türkçe olmalıdır.
@@ -87,19 +90,19 @@ Her önemli tespitin yanına kılavuz sayfasını ekle: (TR2025, s.12) veya (EG2
       "display_source": "Türkiye Psoriasis Tedavi Kılavuzu 2025 (TDD/PSOKİD)",
       "sayfa": 11,
       "bolum": "Bölüm başlığı",
-      "alinti": "Kılavuzdan alınan kısa kilit ifade (maks 120 karakter)"
+      "alinti": "Kılavuz bağlam metninden BİREBİR (verbatim) kopyalanan orijinal ifade (asla paraphrase yapma, maks 120 karakter)"
     }
   ],
   "bulunamadi": false,
   "ret_nedeni": null
 }
 
-Klinik dışı girdi reddinde:
+Kapsam dışı veya klinik dışı girdi reddinde:
 {
-  "cevap": null,
+  "cevap": "Bu konu veya yöntem kılavuzlarda yer almamaktadır.",
   "kaynaklar": [],
   "bulunamadi": true,
-  "ret_nedeni": "Klinik soru değil"
+  "ret_nedeni": "Kılavuz kapsamı dışı konu veya yöntem"
 }
 
 Markdown, kod bloğu, açıklama yazma. SADECE JSON."""
@@ -241,7 +244,29 @@ class QAEngine:
                     prompt,
                     request_options={"timeout": QA_TIMEOUT_SEC},
                 )
-                raw = response.text.strip()
+                finish_reason = "UNKNOWN"
+                if hasattr(response, "candidates") and response.candidates:
+                    cand = response.candidates[0]
+                    fr = getattr(cand, "finish_reason", None)
+                    if fr is not None:
+                        finish_reason = getattr(fr, "name", str(fr))
+                elif not getattr(response, "candidates", None):
+                    finish_reason = "EMPTY_CANDIDATES"
+
+                try:
+                    raw = (response.text or "").strip()
+                except Exception as text_err:
+                    raw = ""
+                    if finish_reason == "UNKNOWN":
+                        finish_reason = f"TEXT_UNAVAILABLE: {text_err}"
+
+                if not raw or "SAFETY" in finish_reason or "OTHER" in finish_reason or finish_reason == "EMPTY_CANDIDATES":
+                    logger.warning(
+                        "[QAEngine] Boş/engelli yanıt — soru: '%s' finish_reason: '%s'",
+                        soru, finish_reason
+                    )
+                    return self._fallback(soru, retrieval, islem_suresi_ms)
+
                 logger.info("[QAEngine] Yanıt alındı (model: %s, %d karakter)", model_name, len(raw))
                 last_exc = None
                 break  # Başarılı → döngüden çık
@@ -367,7 +392,7 @@ class QAEngine:
 
             return QAResponse(
                 soru=soru,
-                cevap=parsed.get("cevap", "").strip(),
+                cevap=(parsed.get("cevap") or "").strip(),
                 kaynaklar=kaynaklar,
                 bulunamadi=parsed.get("bulunamadi", False),
                 fallback_kullanildi=False,
@@ -419,8 +444,9 @@ class QAEngine:
         parts.append(
             f"\nBAĞLAM (Kılavuzdan alınan ilgili bölümler):\n\n"
             f"{retrieval.context_text}\n\n"
-            "Yukarıdaki bağlama dayanarak soruyu yanıtla. "
-            "Eğer bağlamda cevap yoksa 'bulunamadi: true' döndür. "
+            "Yukarıdaki bağlama dayanarak soruyu yanıtla.\n"
+            "- Eğer sorulan konu kılavuz kapsamı dışındaysa (örn: kılavuzda yer almayan geleneksel/alternatif yöntemler [sülük, hacamat vb.], genel enfeksiyon varyant aşı takvimleri veya kılavuz dışı diğer branş hastalıkları), bağlamda ilişkili kelimeler geçse dahi MUTLAKA 'bulunamadi': true döndür.\n"
+            "- Kapsam içi sorularda bağlamdaki kesin sayısal eşikleri (PASI, DLQI, süre, doz, yüzde) tam rakamlarıyla belirt.\n"
             "SADECE JSON formatında cevap ver."
         )
 

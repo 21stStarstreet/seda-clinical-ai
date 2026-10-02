@@ -90,7 +90,7 @@ class Embedder:
         RETRIEVAL_QUERY task type kullanılır — indexlemeden farklı.
         Kullanıcı arayüzünde hızlı yanıt için max_retries=2 ve kısa timeout kullanılır.
         """
-        vectors = self._embed_with_retry([text], task_type=TASK_TYPE_QUERY, max_retries=2, is_interactive=True)
+        vectors = self._embed_with_retry([text], task_type=TASK_TYPE_QUERY, max_retries=3, is_interactive=True)
         return vectors[0]
 
     def _embed_with_retry(
@@ -107,7 +107,7 @@ class Embedder:
         """
         import re
 
-        timeout = 6.0 if is_interactive else 30.0
+        timeout = 10.0 if is_interactive else 30.0
 
         for attempt in range(max_retries):
             try:

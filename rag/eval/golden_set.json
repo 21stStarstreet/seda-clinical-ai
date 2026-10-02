@@ -1,0 +1,1419 @@
+[
+  {
+    "id": "Q01",
+    "soru": "Psoriazis hastasında sistemik tedaviye başlama için PASI, BSA ve DLQI eşikleri nelerdir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          42,
+          43,
+          60,
+          61,
+          80,
+          81,
+          13
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          18,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "PASI > 10",
+      "BSA > %10",
+      "DLQI > 10",
+      "orta-şiddetli psoriazis"
+    ],
+    "sayisal_degerler": [
+      "10",
+      "%10"
+    ],
+    "aciklama": "Sistemik tedavi endikasyonu için kural: PASI>10 veya BSA>%10 veya DLQI>10."
+  },
+  {
+    "id": "Q02",
+    "soru": "Metotreksat (MTX) tedavisine başlanmadan önce hangi laboratuvar testleri ve taramalar yapılmalıdır?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          9,
+          26,
+          27,
+          33,
+          34,
+          37,
+          38
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          32,
+          35,
+          36,
+          38,
+          62
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "hemogram",
+      "karaciğer fonksiyon testleri",
+      "ALT",
+      "AST",
+      "kreatinin",
+      "hepatit",
+      "gebelik testi"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "MTX hepatotoksik ve miyelotoksik olduğundan bazal hemogram, KCFT ve böbrek testleri zorunludur."
+  },
+  {
+    "id": "Q03",
+    "soru": "Metotreksatın yetişkin psoriazis hastalarında haftalık başlangıç ve hedef doz aralığı nedir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          26,
+          27,
+          33,
+          34,
+          36,
+          37
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          32,
+          35,
+          61
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "haftalık tek doz",
+      "folik asit",
+      "10-15 mg",
+      "20-25 mg"
+    ],
+    "sayisal_degerler": [
+      "10",
+      "15",
+      "20",
+      "25"
+    ],
+    "aciklama": "Haftada 1 gün verilir, günlük kesinlikle verilmez."
+  },
+  {
+    "id": "Q04",
+    "soru": "Siklosporin kullanan hastada hipertansiyon ve kreatinin yükselmesinde doz ayarlaması nasıl yapılır?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          9,
+          26,
+          30,
+          33,
+          43,
+          44,
+          46
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          32,
+          51,
+          52,
+          53,
+          54,
+          55
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "kreatinin %30 artış",
+      "doz azaltımı",
+      "kan basıncı takibi",
+      "nefrotoksisite"
+    ],
+    "sayisal_degerler": [
+      "%30",
+      "%25"
+    ],
+    "aciklama": "Bazal kreatinine göre %30 artışta doz %25-50 azaltılır, devam ederse kesilir."
+  },
+  {
+    "id": "Q05",
+    "soru": "Asitretin tedavisi sonrasında kadın hastalarda gebelik yasağı kaç yıl sürmelidir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          26,
+          30,
+          31,
+          32,
+          33,
+          34
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          19,
+          20,
+          21,
+          46,
+          47,
+          48,
+          49,
+          50,
+          188,
+          191
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "teratojenik",
+      "gebelik",
+      "kontrasepsiyon",
+      "3 yıl",
+      "2 yıl"
+    ],
+    "sayisal_degerler": [
+      "2",
+      "3"
+    ],
+    "aciklama": "Asitretin yağ dokusunda depolanarak etretinata dönüştüğü için tedavi bitiminden sonra en az 2-3 yıl gebelik yasaktır."
+  },
+  {
+    "id": "Q06",
+    "soru": "Biyolojik ajan tedavisi öncesinde tüberküloz taraması nasıl yapılır ve latent tüberkülozda profilaksi süresi nedir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          51,
+          54,
+          57,
+          58,
+          141,
+          142
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          40,
+          182
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "PPD",
+      "IGRA",
+      "akciğer grafisi",
+      "izoniazid",
+      "4 hafta",
+      "1 ay"
+    ],
+    "sayisal_degerler": [
+      "4",
+      "1",
+      "9"
+    ],
+    "aciklama": "Biyolojik öncesi PPD veya Quantiferon bakılır, latent TB saptanırsa INH başlanıp en az 4 hafta (1 ay) sonra biyolojik verilir."
+  },
+  {
+    "id": "Q07",
+    "soru": "Adalimumab için plak psoriaziste önerilen başlangıç (indüksiyon) ve idame doz şeması nasıldır?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          49,
+          50,
+          51,
+          52,
+          57
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          32,
+          35,
+          36,
+          67
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "80 mg başlangıç",
+      "40 mg 1. hafta",
+      "iki haftada bir 40 mg"
+    ],
+    "sayisal_degerler": [
+      "80",
+      "40",
+      "1",
+      "2"
+    ],
+    "aciklama": "0. gün 80 mg s.c., 1. hafta 40 mg, sonrasında iki haftada bir 40 mg."
+  },
+  {
+    "id": "Q08",
+    "soru": "Dar bant UVB (nbUVB) fototerapisi kimlere kontrendikedir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          9,
+          10,
+          19,
+          23,
+          24,
+          28,
+          27
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "kseroderma pigmentosum",
+      "lupus eritematozus",
+      "melanom öyküsü",
+      "fotosensitivite"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "DNA onarım bozuklukları, deri kanseri öyküsü ve fotosensitif dermatozlar kesin/rölatif kontrendikasyondur."
+  },
+  {
+    "id": "Q09",
+    "soru": "Tırnak tutulumu (NAPSI) şiddetli olan ve eklemleri tutulan hastada FTR sevk gerekçesi nedir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          10,
+          15,
+          35,
+          37,
+          40,
+          42
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "psoriatik artrit",
+      "entezit",
+      "daktilit",
+      "sabah tutukluğu",
+      "CASPAR"
+    ],
+    "sayisal_degerler": [
+      "30",
+      "3"
+    ],
+    "aciklama": "Tırnak tutulumu psoriatik artrit (PsA) için en güçlü klinik öncüdür."
+  },
+  {
+    "id": "Q10",
+    "soru": "Tedavi yanıtı değerlendirmesinde PASI 75 ve PASI 90 yanıtları ne anlama gelir?",
+    "tur": "dogrudan",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          42,
+          43,
+          60,
+          61,
+          80,
+          14,
+          13,
+          12
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          18,
+          22,
+          23,
+          24
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "%75 azalma",
+      "%90 azalma",
+      "tedavi başarısı",
+      "tam veya tama yakın iyileşme"
+    ],
+    "sayisal_degerler": [
+      "75",
+      "90",
+      "%75",
+      "%90"
+    ],
+    "aciklama": "PASI skorunda başlangıca göre yüzde değişimini ifade eder."
+  },
+  {
+    "id": "Q11",
+    "soru": "Hem orta-şiddetli plak psoriazisi hem de psoriatik artriti (PsA) olan hastada hangi biyolojik ajan sınıfları her iki tutulumda da etkilidir?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          6,
+          10,
+          12,
+          35,
+          42,
+          49,
+          50,
+          139,
+          138
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          11,
+          18,
+          31,
+          35,
+          135,
+          136,
+          137,
+          138,
+          139,
+          140
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "TNF inhibitörleri",
+      "IL-17 inhibitörleri",
+      "IL-23 inhibitörleri",
+      "eklem ve deri yanıtı"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "TNF-alfa (adalimumab vb.), IL-17 (sekukinumab, iksekizumab) ve IL-23 inhibitörleri hem deri hem eklem endikasyonuna sahiptir."
+  },
+  {
+    "id": "Q12",
+    "soru": "Hepatit B taşıyıcısı (HBsAg pozitif) olan psoriazis hastasında biyolojik ajan başlanabilir mi, profilaksi gerekir mi?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          54,
+          57,
+          143,
+          145,
+          144
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "reaktivasyon riski",
+      "antiviral profilaksi",
+      "entekavir",
+      "tenofovir",
+      "gastroenteroloji danışımı"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "HBsAg pozitif hastalarda immünsüpresif/biyolojik öncesi antiviral profilaksi zorunludur."
+  },
+  {
+    "id": "Q13",
+    "soru": "Kronik böbrek yetmezliği olan sedef hastasında konvansiyonel sistemik ilaçlardan hangisi kesinlikle tercih edilmemelidir?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          26,
+          30,
+          33,
+          117
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          165
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "siklosporin",
+      "nefrotoksisite",
+      "kontrendike",
+      "böbrek yetmezliği"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Siklosporin nefrotoksiktir ve böbrek fonksiyon bozukluğunda kontrendikedir."
+  },
+  {
+    "id": "Q14",
+    "soru": "Son 5 yıl içinde malignite öyküsü olan bir hastada sistemik ve biyolojik tedavi yaklaşımı nasıl olmalıdır?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          54,
+          131,
+          130
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "onkoloji konsültasyonu",
+      "immünsüpresyondan kaçınma",
+      "relaps riski",
+      "asitretin",
+      "biyolojik kontrendikasyonu"
+    ],
+    "sayisal_degerler": [
+      "5"
+    ],
+    "aciklama": "Yakın zamanda malignite geçirenlerde immünsüpresif biyolojikler göreceli kontrendikedir, onkologla birlikte karar verilir."
+  },
+  {
+    "id": "Q15",
+    "soru": "Anti-TNF kullanan hastada paradoksal psoriazis alevlenmesi gelişirse kılavuza göre yaklaşım ne olmalıdır?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          50,
+          51,
+          52,
+          103,
+          107
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          99
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "paradoksal reaksiyon",
+      "ilaç değişimi",
+      "farklı etki mekanizması",
+      "IL-17 veya IL-23 geçişi",
+      "topikal tedavi"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Anti-TNF ilişkili paradoksal psoriasiste ajan kesilerek farklı mekanizmalı (IL-17, IL-23 veya ustekinumab) ajana geçilir."
+  },
+  {
+    "id": "Q16",
+    "soru": "Kalp yetmezliği (NYHA Sınıf III-IV) tanısı olan sedef hastasında hangi biyolojik sınıfı kontrendikedir?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          51,
+          129
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          161,
+          162
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "anti-TNF",
+      "TNF alfa inhibitörleri",
+      "kalp yetmezliği",
+      "NYHA III",
+      "NYHA IV"
+    ],
+    "sayisal_degerler": [
+      "3",
+      "4",
+      "III",
+      "IV"
+    ],
+    "aciklama": "TNF blokerleri orta-ileri derece kalp yetmezliğinde mortaliteyi artırdığı için kontrendikedir."
+  },
+  {
+    "id": "Q17",
+    "soru": "Obez (VKİ > 35) ve metabolik sendromlu sedef hastasında sistemik tedavi seçiminde nelere dikkat edilmelidir?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          6,
+          8,
+          26,
+          33,
+          49,
+          136,
+          137,
+          135
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          25,
+          26,
+          150,
+          151,
+          152,
+          153,
+          154,
+          155,
+          156
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "kilo artışı riski",
+      "kardiyovasküler risk",
+      "steatohepatit",
+      "kilo bazlı dozlama"
+    ],
+    "sayisal_degerler": [
+      "35",
+      "30"
+    ],
+    "aciklama": "Obezitede NAFLD riski nedeniyle MTX dikkatli verilir, sabit dozlu biyolojiklerde etkinlik düşebilir."
+  },
+  {
+    "id": "Q18",
+    "soru": "Psoriasis hastasında biyolojik tedavi öncesi rutin aşı takvimi nasıl planlanmalıdır?",
+    "tur": "sentez",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          54,
+          146,
+          142
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          195
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "canlı aşı",
+      "inaktif aşı",
+      "tedavi öncesi 4 hafta",
+      "pnömokok",
+      "influenza"
+    ],
+    "sayisal_degerler": [
+      "4"
+    ],
+    "aciklama": "Canlı aşılar biyolojik başlanmadan en az 4 hafta önce tamamlanmalıdır; biyolojik alırken canlı aşı yasaktır."
+  },
+  {
+    "id": "Q19",
+    "soru": "Türkiye Kılavuzu 2025 ile EuroGuiDerm 2025'e göre sistemik biyolojik tedaviye geçiş endikasyonları nasıl tanımlanmıştır?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          42,
+          43,
+          60,
+          61,
+          8,
+          109,
+          106
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          18,
+          22,
+          23,
+          24,
+          25,
+          32,
+          38,
+          41,
+          42,
+          43,
+          44
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "konvansiyonel tedaviye yanıtsızlık",
+      "PASI > 10",
+      "DLQI > 10",
+      "özel lokalizasyonlar"
+    ],
+    "sayisal_degerler": [
+      "10"
+    ],
+    "aciklama": "Her iki kılavuz da konvansiyonel sistemik tedaviye direnç veya kontrendikasyon varlığında biyolojik önerir."
+  },
+  {
+    "id": "Q20",
+    "soru": "EuroGuiDerm 2025 kılavuzuna göre gebelik ve emzirme döneminde en güvenli kabul edilen biyolojik ajan hangisidir?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          1,
+          4,
+          5,
+          7,
+          15,
+          19,
+          20,
+          21,
+          186,
+          187,
+          188,
+          189,
+          190,
+          191,
+          192,
+          193,
+          194,
+          195,
+          228
+        ]
+      },
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          150,
+          149
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "sertolizumab pegol",
+      "certolizumab pegol",
+      "plasental geçiş yok",
+      "Fc parçası eksik"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Sertolizumab pegol Fc parçası içermediği için plasentayı geçmez ve gebelikte ilk tercihtir."
+  },
+  {
+    "id": "Q21",
+    "soru": "TR2025 ve EuroGuiDerm kılavuzlarına göre tedavi yanıtı için primer değerlendirme haftası genellikle hangi haftadır?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          12,
+          13,
+          42,
+          43,
+          49,
+          50
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          18,
+          22,
+          23,
+          26
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "12. hafta",
+      "16. hafta",
+      "indüksiyon sonu",
+      "yanıt değerlendirmesi"
+    ],
+    "sayisal_degerler": [
+      "12",
+      "16"
+    ],
+    "aciklama": "Biyolojik ajanların primer yanıtı genellikle 12-16. haftalarda değerlendirilir."
+  },
+  {
+    "id": "Q22",
+    "soru": "EuroGuiDerm'de biyobenzer (biosimilar) ilaç geçişi (switching) hakkında ne önerilmektedir?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          11,
+          18,
+          31,
+          35,
+          131,
+          132,
+          133,
+          134
+        ]
+      },
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          99,
+          107
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "biyobenzer",
+      "biosimilar",
+      "etkinlik eşdeğer",
+      "güvenlik profili",
+      "hekim onayı"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Orijinal biyolojik ile onaylı biyobenzer arasında geçişin güvenli ve etkili olduğu belirtilmektedir."
+  },
+  {
+    "id": "Q23",
+    "soru": "İnterlökin-17 inhibitörleri ile tedavi edilen hastalarda EuroGuiDerm ve TR kılavuzlarında hangi enfeksiyon riski özellikle vurgulanır?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          50,
+          52,
+          54,
+          68,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36,
+          114,
+          105,
+          78
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "mukokutanöz kandidiyazis",
+      "candida",
+      "mantar enfeksiyonu"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "IL-17 inhibitörleri mukokutanöz Candida enfeksiyonlarında hafif-orta artışa neden olabilir."
+  },
+  {
+    "id": "Q24",
+    "soru": "EuroGuiDerm ve TR2025 kılavuzlarında fototerapi sonrası kutanöz skuamöz hücreli karsinom (SCC) riski hangi tedavi için daha yüksektir?",
+    "tur": "tr_eg_karsilastirma",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          19,
+          23,
+          24,
+          27
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "PUVA",
+      "psoralen UVA",
+      "kanser riski",
+      "dar bant UVB daha güvenli"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "PUVA tedavisi kümülatif doz arttıkça SCC ve melanom dışı deri kanseri riskini artırır."
+  },
+  {
+    "id": "Q25",
+    "soru": "MTX başlarken karaciğer biyopsisi rutin olarak gerekli midir?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          9,
+          26,
+          33,
+          34,
+          37,
+          38
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          32,
+          35,
+          62
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "rutin biyopsi önerilmez",
+      "PIIINP",
+      "fibroscan",
+      "elastografi",
+      "karaciğer enzimleri"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Modern kılavuzlarda rutin bazal karaciğer biyopsisi terk edilmiş, non-invaziv testler öne çıkmıştır."
+  },
+  {
+    "id": "Q26",
+    "soru": "Anti-TNF başlanacak hastada PPD testi kaç mm üzerinde ise tüberküloz profilaksisi gerekir?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          51,
+          54,
+          141
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          181,
+          182
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "PPD ≥ 5 mm",
+      "BCG aşılı",
+      "latent tüberküloz",
+      "izoniazid"
+    ],
+    "sayisal_degerler": [
+      "5"
+    ],
+    "aciklama": "İmmünsüpresif veya biyolojik başlanacaklarda PPD eşiği 5 mm kabul edilir."
+  },
+  {
+    "id": "Q27",
+    "soru": "Hastanın sabah tutukluğu 45 dakika sürüyor, tırnaklarında yüksük çukurlukları var. Bu FTR ve romatoloji açısından neyi düşündürür?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          10,
+          15,
+          35,
+          37,
+          40,
+          42,
+          137,
+          138,
+          139,
+          140
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "psoriatik artrit",
+      "sabah tutukluğu > 30 dk",
+      "yüksük tırnak",
+      "inflamatuar eklem tutulumu"
+    ],
+    "sayisal_degerler": [
+      "30",
+      "45"
+    ],
+    "aciklama": "30 dakikadan uzun sabah tutukluğu ve tırnak tutulumu inflamatuar psoriatik artrit kuvvetli kanıtıdır."
+  },
+  {
+    "id": "Q28",
+    "soru": "Biyolojik öncesi IGRA testi nedir ve neden PPD yerine veya birlikte istenir?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          54,
+          141
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          178,
+          180
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "interferon gama salınım testi",
+      "Quantiferon",
+      "BCG aşısından etkilenmez",
+      "tüberküloz taraması"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "IGRA (Quantiferon-TB), BCG aşılı kişilerde yalancı pozitiflik oluşturmadığı için tercih edilir."
+  },
+  {
+    "id": "Q29",
+    "soru": "Sekukinumab (Cosentyx) indüksiyon dozları hangi haftalarda uygulanır?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          50,
+          52,
+          77,
+          76,
+          78
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          35,
+          120,
+          121,
+          122,
+          123,
+          124,
+          126
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "0, 1, 2, 3 ve 4. haftalar",
+      "300 mg",
+      "aylık idame"
+    ],
+    "sayisal_degerler": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "300"
+    ],
+    "aciklama": "0, 1, 2, 3, 4. haftalarda haftalık 300 mg indüksiyon, sonra 4 haftada bir 300 mg idame."
+  },
+  {
+    "id": "Q30",
+    "soru": "İksekizumab (Taltz) için ilk gün başlama dozu kaç mg verilir?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          50,
+          52,
+          74,
+          76,
+          75
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          31,
+          35,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "160 mg başlangıç",
+      "iki adet 80 mg enjeksiyon",
+      "2 haftada bir 80 mg"
+    ],
+    "sayisal_degerler": [
+      "160",
+      "80"
+    ],
+    "aciklama": "0. haftada 160 mg (iki adet 80 mg) subkutan yükleme yapılır."
+  },
+  {
+    "id": "Q31",
+    "soru": "Sedef plakları için topikal tedavide kalsipotriol ve betametazon kombinasyonu neden tek başına kortikosteroidden üstündür?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          8,
+          10,
+          12,
+          19,
+          20
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "sinerjistik etki",
+      "atrofi riskini azaltma",
+      "D vitamini analoğu",
+      "kortikosteroid"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Kalsipotriol steroidin epidermal atrofi yapıcı etkisini dengelerken sinerjistik anti-enflamatuar etki gösterir."
+  },
+  {
+    "id": "Q32",
+    "soru": "Generalize püstüler psoriazis (GPP) atağı tetiklememek için hangi sistemik ilaçtan kesinlikle kaçınılmalıdır?",
+    "tur": "kisaltma_ve_diyalog",
+    "kapsam_ici": true,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          15,
+          16,
+          24,
+          26,
+          30,
+          33,
+          46,
+          48,
+          76,
+          79,
+          103,
+          144
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "sistemik kortikosteroid",
+      "oral steroid",
+      "rebound alevlenme",
+      "GPP atağı"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Sistemik steroidlerin ani kesilmesi veya kullanımı hayatı tehdit eden püstüler alevlenmeye yol açabilir."
+  },
+  {
+    "id": "Q33",
+    "soru": "Esansiyel hipertansiyon hastasında ramipril başlama dozu ve takip kriterleri nelerdir?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Kardiyoloji / dahiliye konusu olup psoriasis kılavuzunun dışındadır. bulunamadi: true beklenir."
+  },
+  {
+    "id": "Q34",
+    "soru": "Malign melanom tanılı hastada primer lezyon eksizyonunda Breslow kalınlığına göre güvenlik cerrahi sınırı kaç cm olmalıdır?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Dermatocerrahi ve onkoloji kılavuzu konusu olup psoriasis kılavuzu dışındadır."
+  },
+  {
+    "id": "Q35",
+    "soru": "Akut astım alevlenmesi olan 5 yaşındaki çocukta salbutamol nebülizasyon protokolü nasıldır?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Pediatrik göğüs hastalıkları konusu, kapsam dışı."
+  },
+  {
+    "id": "Q36",
+    "soru": "Diyabetik ketoasidoz tablosunda insülin infüzyonu ve sıvı replasmanı nasıl hesaplanır?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Endokrinoloji acil konusu, kapsam dışı."
+  },
+  {
+    "id": "Q37",
+    "soru": "Akut apandisit düşünülen bir olguda Alvarado skoru 8 çıkarsa cerrahi endikasyon var mıdır?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Genel cerrahi konusu, kapsam dışı."
+  },
+  {
+    "id": "Q38",
+    "soru": "COVID-19 pandemisi için yeni varyant mRNA aşı takvimi nasıl olmalıdır?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Enfeksiyon hastalıkları genel aşı konusu, kapsam dışı."
+  },
+  {
+    "id": "Q39",
+    "soru": "Dermatoloji polikliniğinde bu hafta sonu nöbetçi olan hekim kimdir?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "İdari ve operasyonel soru, klinik kılavuz dışı."
+  },
+  {
+    "id": "Q40",
+    "soru": "Sedef plakları üzerine sülük ve hacamat uygulanması kılavuzda resmi olarak önerilmekte midir?",
+    "tur": "kapsam_disi",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [],
+    "sayisal_degerler": [],
+    "aciklama": "Kılavuzda yer almayan geleneksel uygulama; koebner riski taşır, kılavuzda önerilmez veya yer almaz."
+  },
+  {
+    "id": "Q41",
+    "soru": "Kılavuza göre sedef tedavisinde penisilin antibiyotiği hangi dozda ve kaç gün kullanılır?",
+    "tur": "yanlis_oncul",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [
+      "penisilin sedef tedavisi değildir",
+      "kılavuzda yer almaz",
+      "yanlış öncül"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Yanlış öncül: Sedef bir bakteriyel enfeksiyon değildir, antibiyotik tedavisi kılavuzda önerilmez."
+  },
+  {
+    "id": "Q42",
+    "soru": "Kılavuzda sistemik prednizolonun ilk basamak plak psoriazis ilacı olarak seçilme gerekçesi nedir ve başlama dozu kaçtır?",
+    "tur": "yanlis_oncul",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          26,
+          30,
+          33
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "ilk basamak değildir",
+      "kaçınılmalıdır",
+      "rebound alevlenme",
+      "kontrendike veya önerilmez"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Yanlış öncül: Sistemik steroidler ilk basamak DEĞİLDİR, aksine kesildiğinde eritrodermi ve püstüler psoriazise yol açabileceğinden kaçınılmalıdır."
+  },
+  {
+    "id": "Q43",
+    "soru": "EuroGuiDerm kılavuzuna göre homeopatik damlaların biyolojik ilaçların yerine doğrudan verilebilme şartları nelerdir?",
+    "tur": "yanlis_oncul",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [
+      "homeopati kılavuzda yer almaz",
+      "biyolojiklerin yerini tutmaz",
+      "bilimsel kanıt yok"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Yanlış öncül: Kılavuzda homeopati biyolojiklerin alternatifi olarak asla önerilmez."
+  },
+  {
+    "id": "Q44",
+    "soru": "Biyolojik tedavi alan hastaya canlı zayıflatılmış sarı humma aşısının aynı gün yapılması neden zorunludur?",
+    "tur": "yanlis_oncul",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [
+      {
+        "source_code": "TR2025",
+        "sayfalar": [
+          48,
+          50,
+          54
+        ]
+      },
+      {
+        "source_code": "EG2025",
+        "sayfalar": [
+          35,
+          36
+        ]
+      }
+    ],
+    "kilit_noktalar": [
+      "zorunlu değildir",
+      "kesinlikle kontrendikedir",
+      "canlı aşı yapılamaz",
+      "enfeksiyon riski"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Yanlış öncül: Canlı aşılar biyolojik tedavi altında kesinlikle KONTRENDİKEDİR, aynı gün yapılmaz."
+  },
+  {
+    "id": "Q45",
+    "soru": "Topikal kemoterapi ilacı olan 5-Fluorourasil (5-FU) sedef plaklarında birinci basamak olarak günde kaç kez sürülür?",
+    "tur": "yanlis_oncul",
+    "kapsam_ici": false,
+    "beklenen_kaynaklar": [],
+    "kilit_noktalar": [
+      "5-FU sedef ilacı değildir",
+      "aktinik keratoz içindir",
+      "kılavuzda yer almaz"
+    ],
+    "sayisal_degerler": [],
+    "aciklama": "Yanlış öncül: 5-FU psoriaziste rutin kullanılan birinci basamak bir ilaç değildir."
+  }
+]

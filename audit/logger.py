@@ -74,43 +74,36 @@ def hash_tc(tc_no: str) -> str:
     return hashlib.sha256(tc_no.strip().encode("utf-8")).hexdigest()
 
 
-# ─── Hasta Kimlik Tablosu ─────────────────────────────────────────────────────
+# ─── Hasta Kimlik Tablosu (Legacy - Supabase/PostgreSQL'e kaydedilmez) ─────────
+LegacyPatientBase = declarative_base()
 
-class Patient(Base):
+class Patient(LegacyPatientBase):
     """
-    Hasta kimlik bilgileri tablosu — KVKK uyumlu.
-    Hassas alanlar Fernet ile şifreli saklanır.
-    TC hash'i açık tutulur (şifresi çözülmeden arama yapabilmek için).
+    Hasta kimlik bilgileri tablosu (Legacy yerel model).
+    Zero-PII mimarisi gereği bu tablo PostgreSQL/Supabase bulutuna ASLA kaydedilmez.
     """
 
     __tablename__ = "patients"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-
-    # TC hash — açık, unique, arama için (geri döndürülemez)
     tc_hash = Column(String(64), nullable=False, unique=True, index=True)
-
-    # Şifreli kimlik alanları
     tc_encrypted        = Column(Text, nullable=False)
-    ad_soyad            = Column(Text, nullable=False)        # şifreli
-    dogum_tarihi        = Column(Text, nullable=True)         # şifreli, YYYY-MM-DD
-    cinsiyet            = Column(String(20), nullable=True)   # düz metin
-    telefon             = Column(Text, nullable=True)         # şifreli, nullable
-    kan_grubu           = Column(String(10), nullable=True)   # düz metin, nullable
-    ilk_tani_tarihi     = Column(Date, nullable=True)         # düz metin tarih
-    hekim_notu          = Column(Text, nullable=True)         # şifreli, nullable
-
+    ad_soyad            = Column(Text, nullable=False)
+    dogum_tarihi        = Column(Text, nullable=True)
+    cinsiyet            = Column(String(20), nullable=True)
+    telefon             = Column(Text, nullable=True)
+    kan_grubu           = Column(String(10), nullable=True)
+    ilk_tani_tarihi     = Column(Date, nullable=True)
+    hekim_notu          = Column(Text, nullable=True)
     kayit_tarihi = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
 
-# ─── ORM Modeli ───────────────────────────────────────────────────────────────
+# ─── ORM Modeli (Sadece Anonim Tahmin ve Klinik Loglar) ─────────────────────────
 
 class PredictionLog(Base):
     """
     Audit log tablosu — her satır bir tahmin kaydıdır.
-
-    Şifreli alanlar: input_json, shap_json, llm_explanation
-    Açık alanlar: hasta_id (zaten anonim), tahminler (binary), timestamp
+    Zero-PII: TC, ad, soyad, cinsiyet, doğum tarihi vb. kişisel veri ASLA içermez.
     """
 
     __tablename__ = "prediction_logs"
@@ -120,7 +113,7 @@ class PredictionLog(Base):
     hasta_id = Column(String(50), nullable=True, index=True)
     model_version = Column(String(20), nullable=False)
 
-    # Girdi — ŞİFRELİ (Fernet)
+    # Girdi — ŞİFRELİ (Fernet) - Yalnızca anonim klinik özellikler
     input_json = Column(Text, nullable=False)
 
     # ML Çıktısı — açık (zaten anonim binary değerler)
@@ -139,9 +132,6 @@ class PredictionLog(Base):
 
     # LLM fallback kullanıldı mı? — açık
     llm_fallback_used = Column(Integer, nullable=False, default=0)
-
-    # Hasta TC hash'i — hasta kimlik tablosuna bağlantı (nullable, eski kayıtlar için)
-    patient_tc_hash = Column(String(64), nullable=True, index=True)
 
     # İşlem süresi (ms) — açık
     processing_time_ms = Column(Float, nullable=True)
@@ -172,12 +162,16 @@ class AuditLogger:
     ) -> int:
         """
         Tahmin kaydını şifreleyerek veritabanına yaz.
-        Hassas alanlar (input_json, shap_json, llm_explanation) Fernet ile şifrelenir.
+        Zero-PII: Kimlik ve demografik veriler (TC, ad, soyad, doğum tarihi,
+        cinsiyet, ilk tanı tarihi, telefon) veritabanına KESİNLİKLE kaydedilmez.
+        Sadece anonim klinik özellikler saklanır.
         """
-        raw_input = json.dumps(
-            {k: v for k, v in patient_dict.items() if k != "extra_features"},
-            ensure_ascii=False,
-        )
+        EXCLUDED_PII = {
+            "extra_features", "patient_tc_hash", "tc_no", "tc", "hasta_adi", 
+            "ad_soyad", "dogum_tarihi", "cinsiyet", "ilk_tani_tarihi", "telefon", "hekim_notu"
+        }
+        sanitized_input = {k: v for k, v in patient_dict.items() if k not in EXCLUDED_PII}
+        raw_input = json.dumps(sanitized_input, ensure_ascii=False)
         raw_shap = json.dumps(shap_explanation, ensure_ascii=False)
 
         with self.SessionLocal() as session:
@@ -197,7 +191,6 @@ class AuditLogger:
                 prob_sistemik_tedavi=prediction.probabilities["sistemik_tedavi"],
                 llm_fallback_used=int(llm_fallback_used),
                 processing_time_ms=processing_time_ms,
-                patient_tc_hash=patient_tc_hash,   # ← TC hash bağlantısı
             )
             session.add(record)
             session.commit()
@@ -219,20 +212,12 @@ class AuditLogger:
 
         result = []
         for r in records:
-            hasta_adi = None
             input_json_str = decrypt_field(r.input_json) if r.input_json else None
-            if input_json_str:
-                try:
-                    parsed_input = json.loads(input_json_str)
-                    hasta_adi = parsed_input.get("hasta_adi")
-                except Exception as e:
-                    log.warning("[Audit] get_logs hasta_adi JSON ayrıştırma hatası: %s", e)
-                    
             result.append({
                 "id": r.id,
                 "timestamp": r.timestamp.isoformat(),
                 "hasta_id": r.hasta_id,
-                "hasta_adi": hasta_adi,
+                "hasta_adi": None,
                 "model_version": r.model_version,
                 "tahmin": {
                     "ftr": bool(r.pred_ftr),
@@ -241,43 +226,14 @@ class AuditLogger:
                 },
                 "processing_time_ms": r.processing_time_ms,
                 "input_json": input_json_str,
-                "patient_tc_hash": r.patient_tc_hash,
+                "patient_tc_hash": None,
             })
             
         return result
 
     def get_logs_by_tc_hash(self, tc_hash: str, limit: int = 50) -> list[dict]:
-        """Belirli bir hastanın (TC hash'e göre) tüm değerlendirmelerini döner."""
-        with self.SessionLocal() as session:
-            records = (
-                session.query(PredictionLog)
-                .filter(PredictionLog.patient_tc_hash == tc_hash)
-                .order_by(PredictionLog.timestamp.desc())
-                .limit(limit)
-                .all()
-            )
-
-        result = []
-        for r in records:
-            result.append({
-                "id": r.id,
-                "timestamp": r.timestamp.isoformat(),
-                "hasta_id": r.hasta_id,
-                "model_version": r.model_version,
-                "tahmin": {
-                    "ftr": bool(r.pred_ftr),
-                    "aile_hekimligi": bool(r.pred_aile_hekimligi),
-                    "sistemik_tedavi": bool(r.pred_sistemik_tedavi),
-                },
-                "olasiliklar": {
-                    "ftr": round(r.prob_ftr, 3),
-                    "aile_hekimligi": round(r.prob_aile_hekimligi, 3),
-                    "sistemik_tedavi": round(r.prob_sistemik_tedavi, 3),
-                },
-                "processing_time_ms": r.processing_time_ms,
-            })
-
-        return result
+        """Zero-PII mimarisi gereği TC bazlı log tutulmaz."""
+        return []
 
 
     def get_log_by_id(self, log_id: int) -> dict | None:

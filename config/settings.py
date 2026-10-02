@@ -4,7 +4,7 @@ Tüm konfigürasyon buradan okunur — sihirli sayılar bu dosyaya gömülmez.
 """
 
 from pydantic_settings import BaseSettings
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, field_validator
 from typing import Any
 import os
 import random
@@ -33,6 +33,13 @@ class Settings(BaseSettings):
 
     # ─── Veritabanı ───────────────────────────────────────────────
     database_url: str = Field(default="sqlite:///./audit.db")
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def normalize_db_url(cls, v: str) -> str:
+        if v and v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return v
 
     # ─── LLM ──────────────────────────────────────────────────────
     gemini_api_key: str = Field(default="", description="Gemini API anahtarı")

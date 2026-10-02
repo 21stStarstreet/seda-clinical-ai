@@ -23,7 +23,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, AliasChoices
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -193,9 +193,9 @@ async def http_access_log_middleware(request: Request, call_next):
 # ─── Auth Router'ı dahil et (/token ve /logout burada) ───────────────────────
 app.include_router(auth_router)
 
-# ─── Patients Router'ı dahil et ───────────────────────────────────────────────
-from api.patients import router as patients_router
-app.include_router(patients_router)
+# ─── Patients Router (Zero-PII prensibi: Hasta kimlik tablosu kullanılmaz) ───
+# from api.patients import router as patients_router
+# app.include_router(patients_router)
 
 from feature_store.schema import PsoriasisType, SystemicResponse
 
@@ -214,7 +214,11 @@ class PatientInput(BaseModel):
     patient_tc_hash: Optional[str] = None   # TC hash — hasta kimliğini audit log'a bağlar
     psoriazis_tipi: str = Field(default="Plak", description="Plak | Guttat | Püstüler | Eritrodermik | Ters")
     tirnak_tutulumu: bool = False
-    sabah_turuklugu_30dk: bool = False
+    sabah_turuklugu_30dk: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("sabah_tutuklugu_30dk", "sabah_turuklugu_30dk"),
+        description="30 dk üzeri sabah tutukluğu (Doğru yazım: sabah_tutuklugu_30dk veya legacy sabah_turuklugu_30dk)",
+    )
     vki: Optional[float] = Field(default=None, ge=10.0, le=80.0)
     ldl: Optional[float] = Field(default=None, ge=0.0, le=500.0)
     pasi_skoru: Optional[float] = Field(default=None, ge=0.0, le=72.0)
@@ -359,7 +363,7 @@ async def predict(
 
     elapsed_ms = (time.time() - start_time) * 1000
 
-    # 4. Audit Log (şifreli)
+    # 4. Audit Log (şifreli, anonim)
     audit_id = audit_logger.log(
         patient_dict=patient_input.model_dump(),
         prediction=prediction,
@@ -367,7 +371,6 @@ async def predict(
         llm_text=llm_detayli,
         llm_fallback_used=is_fallback,
         processing_time_ms=elapsed_ms,
-        patient_tc_hash=patient_input.patient_tc_hash,
     )
 
     # Yanıt formatla

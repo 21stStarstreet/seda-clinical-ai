@@ -79,9 +79,11 @@ class AccessLogger:
     """
 
     def __init__(self):
+        url = settings.database_url
+        connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
         engine = create_engine(
-            settings.database_url,
-            connect_args={"check_same_thread": False},  # SQLite çoklu thread desteği
+            url,
+            connect_args=connect_args,
             echo=False,
         )
         # Mevcut audit.db'ye ek tablo oluştur (varsa atla)

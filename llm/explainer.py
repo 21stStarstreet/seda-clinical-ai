@@ -14,11 +14,54 @@ Kullanım:
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from config.settings import settings, LABEL_NAMES, LABEL_DISPLAY_NAMES
 from models.predictor import PredictionResult
 from llm.guidelines_kb import GuidelinesKnowledgeBase, guidelines_kb
+
+# ─── DLP: Hekim Notu Kişisel Veri Sanitizasyonu ──────────────────────────────
+
+def _sanitize_hekim_notu(text: str) -> str:
+    """
+    Hekim notunun LLM'e gönderilmeden önce olası kişisel tanımlayıcılardan
+    arındırılmasını sağlar (Data Loss Prevention — DLP).
+
+    Yakalanan kalıplar:
+        - 11 haneli TC Kimlik Numarası
+        - Türk formatında telefon numaraları (05xx, +90, 0 (5xx) vb.)
+        - E-posta adresleri
+        - IP adresleri (IPv4)
+        - IBAN numaraları (TR ile başlayan)
+        - Seri numarası görünümlü ard arda ≥8 rakam dizisi
+
+    Eşleşen değerler [GİZLENDİ] etiketiyle maskelenir.
+    Klinik metin tamamen korunur.
+    """
+    if not text:
+        return text
+
+    patterns = [
+        # TC Kimlik No: tam 11 rakam (kelime sınırları ile)
+        (r"\b[1-9][0-9]{10}\b", "[GİZLENDİ-TC]"),
+        # Türk telefon numaraları: 05xx, +905xx, 0(5xx), boşluklu varyantlar
+        (r"(\+?90[\s\-]?)?0?[\s\-]?\(?5[0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}", "[GİZLENDİ-TEL]"),
+        # E-posta adresleri
+        (r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", "[GİZLENDİ-EPOSTA]"),
+        # IPv4 adresleri
+        (r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", "[GİZLENDİ-IP]"),
+        # IBAN: TR + 24 rakam
+        (r"\bTR[0-9]{24}\b", "[GİZLENDİ-IBAN]"),
+        # Genel uzun rakam dizileri (≥8 haneli — TC dışı ama şüpheli)
+        (r"\b[0-9]{8,}\b", "[GİZLENDİ]"),
+    ]
+
+    sanitized = text
+    for pattern, replacement in patterns:
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+    return sanitized
 
 # ─── Prompt Şablonları ────────────────────────────────────────────────────────
 
@@ -164,12 +207,14 @@ def build_explanation_prompt(
         "Hastanın mevcut klinik verileri doğrultusunda aşağıdaki yönlendirme kararları alınmıştır:\n",
     ]
 
-    # ── Hekim Notu ────────────────────────────────────────────────────────────
-    etkili_hekim_notu = (
+    # ── Hekim Notu (DLP Filtresi Uygulandı) ───────────────────────────────────
+    ham_hekim_notu = (
         hekim_notu.strip()
         if (hekim_notu and hekim_notu.strip())
         else "Standart poliklinik değerlendirmesi yapılmıştır, ilave anamnez/gözlem notu bulunmamaktadır."
     )
+    # Kişisel tanımlayıcıları maskele (TC, telefon, e-posta, vb.) — LLM'e hiçbir PII gitmez
+    etkili_hekim_notu = _sanitize_hekim_notu(ham_hekim_notu)
     prompt_lines.append(f"MUAYENE EDEN HEKİMİN KLİNİK NOTU / GÖZLEMİ:\n\"{etkili_hekim_notu}\"\n")
 
     # ── Karar Özetleri ────────────────────────────────────────────────────────

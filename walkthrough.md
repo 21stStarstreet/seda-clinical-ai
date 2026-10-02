@@ -14,7 +14,7 @@
   <!-- Yapay Zekâ & Makine Öğrenmesi -->
   <img src="https://img.shields.io/badge/XGBoost-Binary_Relevance-EB5424?style=flat" alt="XGBoost" />
   <img src="https://img.shields.io/badge/SHAP-TreeExplainer-FF6F00?style=flat" alt="SHAP" />
-  <img src="https://img.shields.io/badge/Google_Gemini-3.1_Flash_Lite-8E75C2?style=flat&logo=google-gemini&logoColor=white" alt="Gemini" />
+  <img src="https://img.shields.io/badge/Google_Gemini-1.5_Flash-8E75C2?style=flat&logo=google-gemini&logoColor=white" alt="Gemini" />
   <img src="https://img.shields.io/badge/Scikit_Learn-Pipeline-F7931E?style=flat&logo=scikit-learn&logoColor=white" alt="Scikit-Learn" />
 </p>
 
@@ -146,8 +146,6 @@ ldl: float                  # mg/dL — AH eşik: >130
 pasi_skoru: float           # 0–72 — Sistemik eşik: >10
 sigara: bool                # AH göstergesi
 ```
-
-> **API Uyumluluğu & Yazım Notu:** Eğitilmiş v1.0 model özniteliğinde tarihsel olarak `sabah_turuklugu` adı kullanılmıştır. API katmanında (`PatientInput`) sözleşme kırılmadan Pydantic `AliasChoices("sabah_tutuklugu_30dk", "sabah_turuklugu_30dk")` desteği eklenmiştir; istemciler hem doğru tıbbi yazımı (`sabah_tutuklugu_30dk`) hem de legacy adı kullanabilir.
 
 ### v2.0 — Opsiyonel alanlar (hocadan gelecek):
 
@@ -1114,6 +1112,103 @@ cd cdss_web && dotnet run --urls "http://localhost:5000"
 
 # Faz 3 — Adım Adım Uygulama Kaydı
 
+> **Tarih**: 14 Ağustos 2026  
+> **Amaç**: Güvenlik, Raporlama ve Web Arayüzü Geliştirmeleri  
+> **Ortam**: Blazor Server (.NET 8), C#, macOS  
+
+---
+
+## Adım 1 — Kimlik Doğrulama ve Login Ekranı (Authentication)
+
+**Amaç:** Açık sistemin güvenliğini sağlamak.
+
+### 1.1 CustomAuthStateProvider.cs
+Blazor Server için özel bir kimlik doğrulayıcı yazıldı.
+- `ProtectedSessionStorage` ile tarayıcıda şifreli oturum yönetimi sağlandı.
+- Şimdilik hardcoded hesaplar: `doktor` (`cdss2024`) ve `admin` (`admin2024`).
+
+### 1.2 Login.razor
+- Koyu tema (Dark Mode) uyumlu giriş sayfası yapıldı.
+- Başarısız giriş denemeleri için UI hata mesajları eklendi.
+
+### 1.3 Routing Güvenliği
+- `MainLayout.razor` içerisinde `OnAfterRenderAsync` kullanarak oturum kontrolü yapıldı.
+- Giriş yapmamış kullanıcılar otomatik olarak `/login` adresine yönlendirildi.
+
+---
+
+## Adım 2 — Oturum Zaman Aşımı (Session Timeout)
+
+**Amaç:** Doktorun masadan ayrılması durumunda 30 dakikalık inactivity sonrası oturumu sonlandırmak.
+
+### 2.1 JavaScript Aktivite Takibi
+- `cdss.js` oluşturularak fare hareketi, klavye ve tıklama gibi olaylar (`mousemove`, `keydown`) dinlendi.
+- Boşta geçen süreyi dönen `getIdleSeconds` fonksiyonu yazıldı.
+
+### 2.2 Arka Plan Zamanlayıcı (Timer)
+- `MainLayout.razor` içinde her 30 saniyede bir çalışan `System.Timers.Timer` eklendi.
+- **Kritik Çözüm:** Timer arka plan thread'inde çalıştığı için JS interop hata veriyordu. Timer eventi `InvokeAsync(TimeoutKontrol)` içine alınarak UI Thread'e senkronize edildi.
+
+### 2.3 UI Uyarıları
+- Son 60 saniye kala kullanıcıya "Oturumunuz kapanıyor, devam et?" pop-up'ı gösterildi.
+
+---
+
+## Adım 3 — PDF Karar Raporu İndirme
+
+**Amaç:** Modelin kararlarını HBYS'ye eklenmek üzere resmi bir formata dökmek.
+
+### 3.1 QuestPDF Entegrasyonu
+- `QuestPDF` kütüphanesi projeye eklendi (`dotnet add package QuestPDF`).
+- Font lisansı için `QuestPDF.Settings.License = LicenseType.Community` ayarı yapıldı.
+
+### 3.2 PdfReportService.cs
+- `Document.Create` yapısıyla klinik rapor şablonu oluşturuldu.
+- Hastanın parametreleri (PASI, VKİ vb.), önerilen kararlar, SHAP tabanlı yapay zeka açıklaması tek bir dosyada birleştirildi.
+- Negatif kararların güven skoru düzeltildi: Olasılık (`p`) düşükse, güven `= 1 - p` şeklinde rapora eklendi.
+
+### 3.3 İndirme Tetikleyicisi
+- `cdss.js` içine `downloadFile(filename, base64)` fonksiyonu yazıldı.
+- `Predict.razor` içine "📄 Raporu İndir" butonu eklenip JS ile köprü kuruldu.
+
+---
+
+## Adım 4 — KVKK Uyumlu Audit Log UI
+
+**Amaç:** Verilen tüm kararların geriye dönük izlenebilmesi (Sadece Admin yetkisiyle).
+
+### 4.1 AuditLogs.razor
+- Sisteme `/audit-log` sayfası eklendi.
+- `CdssApiService.cs` içindeki `GetLogsAsync` metoduna bağlandı.
+
+### 4.2 KVKK Veri Maskeleme
+- Tablo üzerinde gösterilen hasta ID'leri `Ha****12` formatına sokularak hasta mahremiyeti korundu.
+
+---
+
+## Adım 5 — Blazor SSR ve UI İyileştirmeleri
+
+**Amaç:** Arayüzün kullanım kolaylığı ve butonların stabil çalışması.
+
+### 5.1 InteractiveServer Problemi
+- Blazor .NET 8 varsayılan olarak "Static Server Rendering" (SSR) kullandığı için `MainLayout.razor` içindeki buton tıklamaları (`@onclick`) algılanmıyordu.
+- **Çözüm:** `App.razor` dosyasındaki `Routes` bileşeni `<Routes @rendermode="InteractiveServer" />` olarak güncellendi.
+- Bu sayede uygulamanın tüm layout'u ve sayfaları interaktif hale getirildi.
+
+### 5.2 Responsive Sidebar
+- Menü öğeleri arttığında "Çıkış Yap" ve "API Durumu" gibi alt bilgi ekranının taşmasını engellemek için `flex-grow: 1` ve `overflow-y: auto` CSS düzeltmeleri yapıldı.
+
+---
+
+## Faz 4 (Prodüksiyon) Bekleyen Adımlar
+
+- [ ] Gerçek hasta verisi ETL pipeline'ı ve Model v2.0 eğitimi
+- [ ] Kimlik doğrulama — Hastane AD / JWT login entegrasyonu
+- [ ] KVKK uyumluluk katmanı (SQLite veritabanı şifreleme)
+- [ ] API Rate limiting ve HTTPS zorunluluğu
+
+# Faz 3 — Adım Adım Uygulama Kaydı
+
 > **Tarih**: 30–31 Temmuz 2026
 > **Amaç**: CDSS'i açık prototipten klinik kullanıma uygun, güvenli ve raporlanabilir bir uygulamaya dönüştürmek
 > **Ortam**: .NET 8 Blazor Server, macOS, proje dizini: `~/Projects/dermatology_project/cdss_web`
@@ -1605,7 +1700,7 @@ public string GenerateBase64(PredictionResponse pred, PatientInputModel patient)
 ```csharp
 private static string MaskHastaId(string hastaId)
 {
-    // "PSO-TEST-001" (12 karakter) → "PS********01" (8 yıldız)
+    // "PSO-TEST-001" → "PS*******01"
     if (hastaId.Length <= 4) return new string('*', hastaId.Length);
 
     return hastaId[..2]
@@ -1620,7 +1715,7 @@ private static string MaskHastaId(string hastaId)
 
 | # | Tarih / Saat | Hasta ID (Maskeli) | Önerilen Birimler | Süre | Model |
 |---|-------------|-------------------|-------------------|------|-------|
-| 3 | 31.07.2026 09:14 | PS\*\*\*\*\*\*\*\*01 | 🏃 FTR 🏥 Aile Hek. 💊 Sistemik | 7 ms | v1.0 |
+| 3 | 31.07.2026 09:14 | PS\*\*\*\*\*\*\*01 | 🏃 FTR 🏥 Aile Hek. 💊 Sistemik | 7 ms | v1.0 |
 
 ### Filtreleme:
 
@@ -1632,7 +1727,7 @@ private static string MaskHastaId(string hastaId)
        @onkeydown="@(e => { if (e.Key == "Enter") LoadLogs(); })" />
 ```
 
-**Not:** Kullanıcı filtreye maskelenmiş ID (`PS********01`) değil, tam ID (`PSO-TEST-001`) yazarak arama yapabilir. Maskeleme yalnızca görüntüleme katmanında devreye girer; API sorgusu ham ID ile çalışır.
+**Not:** Kullanıcı filtreye maskelenmiş ID (`PS*******01`) değil, tam ID (`PSO-TEST-001`) yazarak arama yapabilir. Maskeleme yalnızca görüntüleme katmanında devreye girer; API sorgusu ham ID ile çalışır.
 
 ---
 
@@ -1856,7 +1951,7 @@ cd cdss_web && dotnet run --urls "http://localhost:5000"
 - [ ] Retrospektif validasyon — eski doktor kararları vs. model çıktıları karşılaştırması
 - [ ] Model v2.0 eğitimi — gerçek veriyle, DLQI/BSA/yaş özelliklerini aktifleştirerek
 - [ ] Kimlik doğrulama — Hastane AD (Active Directory) / gerçek JWT login entegrasyonu
-- [ ] KVKK log şifreleme — audit tablosunda `input_json` alanı Fernet (AES-128-CBC) ile şifrelenmeli
+- [ ] KVKK log şifreleme — audit tablosunda `input_json` alanı AES-256 ile şifrelenmeli
 - [ ] PDF rapor geliştirme — SHAP waterfall görselini PDF içine gömmek (SVG → QuestPDF entegrasyonu)
 - [ ] İzleme / alerting — Sentry veya Azure Monitor entegrasyonu; model confidence < 0.6 için uyarı
 
@@ -2528,11 +2623,11 @@ curl -X POST http://localhost:8000/predict \
 # HTTP 200 + tahmin sonucu  ✅
 ```
 
-**Senaryo 3 — Rate limiting (/predict):**
+**Senaryo 3 — Rate limiting:**
 ```bash
-# 31. /predict isteğinde (dakikada 30 limit)
+# 11. /token isteğinde (dakikada 10 limit)
 # HTTP 429 Too Many Requests
-# {"error": "Rate limit exceeded: 30 per 1 minute"}  ✅
+# {"error": "Rate limit exceeded: 10 per 1 minute"}  ✅
 ```
 
 **Senaryo 4 — Şifreli veritabanı:**
@@ -2641,7 +2736,7 @@ python scripts/backup.py
 
 > **Tarih**: Eylül 2026
 > **Amaç**: SEDA'ya kılavuz tabanlı soru-cevap yeteneği kazandırmak — XGBoost modeli sevk kararı verirken, RAG sistemi "neden?" sorusunu yanıtlar
-> **Mimari**: Retrieval-Augmented Generation (RAG) — ChromaDB + Gemini Embedding + Gemini 3.1 Flash Lite
+> **Mimari**: Retrieval-Augmented Generation (RAG) — ChromaDB + Gemini Embedding + Gemini 3.5 Flash
 > **Proje dizini**: `~/Projects/dermatology_project/rag/`
 
 ---
@@ -2792,7 +2887,7 @@ class Chunk:
 
 ## Adım 5 — Gömme Motoru (`rag/embedder.py`)
 
-**Amaç:** Metin chunk'larını 3072 boyutlu sayısal vektörlere dönüştürmek (`gemini-embedding-001` tam uzayı).
+**Amaç:** Metin chunk'larını 768 boyutlu sayısal vektörlere dönüştürmek.
 
 ### Kritik Tasarım: İki Farklı Görev Türü
 
@@ -2872,10 +2967,10 @@ rag/chroma_db/
 ```
 Soru (serbest metin)
     ↓ embed_query() [RETRIEVAL_QUERY task]
-Sorgu Vektörü (3072 boyut)
+Sorgu Vektörü (768 boyut)
     ↓ ChromaDB.query(top_k + 2)       ← +2: filtre kayıplarına karşı tampon
 Raw Hits (distance'a göre sıralı)
-    ↓ Distance threshold filtresi      (max 0.65 — ilgisiz soru → found=False)
+    ↓ Distance threshold filtresi      (max 0.75 — ilgisiz soru → found=False)
     ↓ Sayfa bazlı çeşitlilik           (aynı sayfadan max 2 chunk)
     ↓ Top-K kesme                      (varsayılan 5)
 RetrievalResult listesi
@@ -3097,7 +3192,7 @@ qa_response.to_dict()  → JSON yanıt
 │  [ Sorunuzu yazın...     ]     │  "In patients with PASI..."     │
 │  [         Danış         ]     │  ─────────────────────────────  │
 │                                │  ⏱ 1.240 ms                    │
-│                                │  🤖 Gemini 3.1 Flash Lite      │
+│                                │  🤖 Gemini 3.5 Flash           │
 │                                │  📦 5 chunk tarandı             │
 └────────────────────────────────┴─────────────────────────────────┘
 ```
@@ -3155,7 +3250,7 @@ curl -sX POST http://localhost:8000/guideline-query \
 
 1. **Sistem promptu en kritik bileşendir** — Çok gevşek → hallüsinasyon; çok katı → bağlamdaki doğru bilgiler bile söylenmez. Doğru denge: "SADECE bu bağlamdan cevap ver, ama cevabı kendi kelimelerinle yaz."
 
-2. **Distance threshold olmadan RAG işe yaramaz** — Eşik yoksa konu dışı sorulara uydurma yanıt üretilir. Başlangıçtaki `0.75` eşiği, FTR sorgularında biyolojik tedavi sayfalarının yanlış eşleşmesi nedeniyle `0.65` değerine çekilmiştir; bu eşiğin üstündeki mesafelerde `found=False` döndürülerek LLM hiç çağrılmaz.
+2. **Distance threshold olmadan RAG işe yaramaz** — Eşik yoksa konu dışı sorulara uydurma yanıt üretilir. `0.75` değeri `found=False` döndürerek LLM'i hiç çağırmaz.
 
 3. **İki farklı embedding task type zorunlu** — `RETRIEVAL_DOCUMENT` (indexleme) ve `RETRIEVAL_QUERY` (sorgulama) Gemini tarafından ayrı optimize edilir; ikisi için aynı task type retrieval doğruluğunu düşürür.
 
@@ -3258,7 +3353,7 @@ QA_FALLBACK_MODELS   = [
 PREPROCESSOR_MODEL   = "models/gemini-3.1-flash-lite-preview"
 ```
 
-> **Model Mimarisi Notu:** Kılavuz QA motorunda birincil model olarak `"gemini-3.1-flash-lite-preview"` (yüksek kota kapasitesi, hızlı yanıt) kullanılmaktadır. Olası 429 kota veya geçici API hatalarında `QA_FALLBACK_MODELS` listesindeki yedek zinciri otomatik olarak devreye girer.
+> **Düzeltme:** Faz 5 bölümünde `QA_MODEL = "gemini-3.6-flash"` yazıyordu. Bu model adı gerçekte `"gemini-3.1-flash-lite-preview"` olarak güncellendi.
 
 ---
 
@@ -3464,18 +3559,3 @@ Aşağıdaki düzeltmeler, sistem tamamlandıktan sonra tespit edilen güvenlik 
 **Sorun:** Değerlendirme ekranındaki serbest metin "Hekim Klinik Notu" alanına hekimin yanlışlıkla hasta kimlik bilgisi (TC, telefon, e-posta vb.) girmesi halinde bu metin doğrudan Gemini API'ye iletiliyordu.
 
 **Düzeltme:** `llm/explainer.py` dosyasına bir **Veri Kaybı Önleme (DLP)** filtresi eklendi. Bu filtre, hekim notu Gemini'ye iletilmeden hemen önce araya girerek TC kimlik numarası, Türk formatında telefon numarası, e-posta adresi, IBAN ve şüpheli uzun rakam dizilerini `[GİZLENDİ]` etiketiyle maskeler. Klinik içerik ve tıbbi terminoloji hiçbir şekilde etkilenmez. Bu sayede uygulama, serbest metin girdisi içeren tüm modüllerde uçtan uca kişisel veri sıfırlaması sağlar.
-
----
-
-### 4. Teknik ve Dokümantasyonel Parametre Eşitlemeleri
-
-**Sorun:** Sistem geliştikçe konfigürasyon dosyalarındaki güncellemeler ile dokümantasyon diyagramları ve parametre tanımları arasında küçük sapmalar oluşmuştur.
-
-**Düzeltme:**
-- **Mesafe Eşiği Senkronizasyonu:** RAG retriever diyagramı ve öğrenilen dersler bölümündeki eski `0.75` eşiği, `rag/config.py` içerisindeki güncel `0.65` değeriyle eşitlendi.
-- **Embedding Boyutu:** `gemini-embedding-001` modelinin tam çıktı boyutu olan `3072` vektör boyutu dokümantasyona işlendi (ChromaDB fiili boyutuyla doğrulandı).
-- **Gemini Model İsimleri:** Rozet, mimari özetleri ve UI şemalarındaki model isimleri projenin aktif modeli olan `gemini-3.1-flash-lite-preview` ile tutarlı hale getirildi.
-- **Şifreleme Notasyonu:** Fernet simetrik anahtar standardı olan `AES-128-CBC` (ve HMAC-SHA256) tüm başlıklarda tekleştirildi.
-- **Tıbbi Alan Adı Uyumluluğu:** `sabah_turuklugu_30dk` alanı için FastAPI `PatientInput` şemasında Pydantic `AliasChoices` desteği sağlandı; böylece hem doğru yazım (`sabah_tutuklugu_30dk`) hem de modelin eğitildiği eski ad desteklenir hale getirildi.
-- **Maskeleme Örneği:** 12 karakterli `PSO-TEST-001` için üretilen maskeli gösterim 8 yıldız (`PS********01`) olarak düzeltildi.
-- **Rate Limit Test Senaryosu:** Test senaryosu kodda aktif korunan `/predict` endpoint'i (30/dakika) ile senkronize edildi.
